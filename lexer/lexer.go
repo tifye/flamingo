@@ -28,7 +28,7 @@ func NewLexer(input string) *Lexer {
 		input: input,
 		// Channel must be large enough to support the largest
 		// amount of tokens that can be outputed from a single state
-		tokens: make(chan token.Token, 5),
+		tokens: make(chan token.Token, 6),
 		state:  lexText,
 	}
 	return l
@@ -94,6 +94,18 @@ func (l *Lexer) accept(valid string) bool {
 	return false
 }
 
+func (l *Lexer) acceptRun(valid string) {
+	for strings.ContainsRune(valid, l.next()) {
+	}
+	l.backup()
+}
+
+func (l *Lexer) runUntil(valid string) {
+	for !strings.ContainsRune(valid, l.next()) {
+	}
+	l.backup()
+}
+
 func lexText(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
@@ -129,23 +141,79 @@ func lexTag(l *Lexer) stateFunc {
 		l.emit(token.SLASH)
 	}
 
-	for {
-		if strings.HasPrefix(l.input[l.pos:], ">") {
+	l.runUntil("> ")
+	ch = l.peek()
+	if ch == eof {
+		if l.pos > l.start {
 			l.emit(token.IDENT)
-			break
 		}
 
-		if l.next() == eof {
-			break
-		}
-	}
-
-	if !l.accept(">") {
-		l.emit(token.ERROR)
+		l.emit(token.EOF)
 		return nil
 	}
 
-	l.emit(token.RIGHT_CHEV)
+	l.emit(token.IDENT)
 
-	return lexText
+	// todo: check all types of empty characters
+	l.acceptRun(" ")
+
+	if l.accept(">") {
+		l.emit(token.RIGHT_CHEV)
+		return lexText
+	}
+
+	return lexAttribute
+}
+
+func lexAttribute(l *Lexer) stateFunc {
+	assert.Assert(!l.accept(" "), "expected no empty characters")
+
+	l.runUntil("=")
+	if l.peek() == eof {
+		if l.pos > l.start {
+			l.emit(token.IDENT)
+		}
+		l.emit(token.EOF)
+		return nil
+	}
+
+	l.emit(token.IDENT)
+
+	if !l.accept("=") {
+		l.emit(token.ERROR)
+		return nil
+	}
+	l.emit(token.ASSIGN)
+
+	if !l.accept(`"`) {
+		l.emit(token.ERROR)
+		return nil
+	}
+	l.emit(token.QUOTE)
+
+	l.runUntil(`"`)
+	if l.peek() == eof {
+		if l.pos > l.start {
+			l.emit(token.TEXT)
+		}
+		l.emit(token.EOF)
+		return nil
+	}
+
+	l.emit(token.TEXT)
+
+	if !l.accept(`"`) {
+		l.emit(token.ERROR)
+		return nil
+	}
+	l.emit(token.QUOTE)
+
+	l.acceptRun(" ")
+
+	if l.accept(">") {
+		l.emit(token.RIGHT_CHEV)
+		return lexText
+	}
+
+	return lexAttribute
 }
