@@ -86,6 +86,14 @@ func (l *Lexer) peek() rune {
 	return r
 }
 
+func (l *Lexer) accept(valid string) bool {
+	if strings.ContainsRune(valid, l.next()) {
+		return true
+	}
+	l.backup()
+	return false
+}
+
 func lexText(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
@@ -117,10 +125,8 @@ func lexTag(l *Lexer) stateFunc {
 	assert.Assert(ch == '<', "expected '<'")
 	l.emit(token.LEFT_CHEV)
 
-	if ch := l.next(); ch == '/' {
+	if l.accept("/") {
 		l.emit(token.SLASH)
-	} else {
-		l.backup()
 	}
 
 	for {
@@ -134,10 +140,11 @@ func lexTag(l *Lexer) stateFunc {
 		}
 	}
 
-	if ch := l.next(); ch != '>' {
+	if !l.accept(">") {
 		l.emit(token.ERROR)
 		return nil
 	}
+
 	l.emit(token.RIGHT_CHEV)
 
 	return lexText
