@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -95,13 +96,13 @@ func (l *Lexer) accept(valid string) bool {
 }
 
 func (l *Lexer) acceptRun(valid string) {
-	for strings.ContainsRune(valid, l.next()) {
+	for next := l.next(); strings.ContainsRune(valid, next) && next != eof; next = l.next() {
 	}
 	l.backup()
 }
 
 func (l *Lexer) runUntil(valid string) {
-	for !strings.ContainsRune(valid, l.next()) {
+	for next := l.next(); !strings.ContainsRune(valid, next) && next != eof; next = l.next() {
 	}
 	l.backup()
 }
@@ -109,25 +110,20 @@ func (l *Lexer) runUntil(valid string) {
 func lexText(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
-	for {
-		if strings.HasPrefix(l.input[l.pos:], "<") {
-			// There might not be any text
-			if l.pos > l.start {
-				l.emit(token.TEXT)
-			}
-			return lexTag
+	l.runUntil("<")
+	if l.peek() == eof {
+		if l.pos > l.start {
+			l.emit(token.TEXT)
 		}
 
-		if l.next() == eof {
-			if l.pos > l.start {
-				l.emit(token.TEXT)
-			}
-			break
-		}
+		l.emit(token.EOF)
+		return nil
 	}
 
-	l.emit(token.EOF)
-	return nil
+	if l.pos > l.start {
+		l.emit(token.TEXT)
+	}
+	return lexTag
 }
 
 func lexTag(l *Lexer) stateFunc {
@@ -142,8 +138,9 @@ func lexTag(l *Lexer) stateFunc {
 	}
 
 	l.runUntil("> ")
-	ch = l.peek()
-	if ch == eof {
+	if l.peek() != eof {
+		l.emit(token.IDENT)
+	} else {
 		if l.pos > l.start {
 			l.emit(token.IDENT)
 		}
@@ -151,8 +148,6 @@ func lexTag(l *Lexer) stateFunc {
 		l.emit(token.EOF)
 		return nil
 	}
-
-	l.emit(token.IDENT)
 
 	// todo: check all types of empty characters
 	l.acceptRun(" ")
@@ -175,24 +170,26 @@ func lexAttribute(l *Lexer) stateFunc {
 		}
 		l.emit(token.EOF)
 		return nil
+	} else {
+		l.emit(token.IDENT)
 	}
 
-	l.emit(token.IDENT)
-
-	if !l.accept("=") {
-		l.emit(token.ERROR)
-		return nil
+	if l.accept("=") {
+		l.emit(token.ASSIGN)
+	} else {
+		return l.errorf(`expected assignment(=) after attribute identifier`)
 	}
-	l.emit(token.ASSIGN)
 
-	if !l.accept(`"`) {
-		l.emit(token.ERROR)
-		return nil
+	if l.accept(`"`) {
+		l.emit(token.QUOTE)
+	} else {
+		return l.errorf(`expected quote(") to start attribute value`)
 	}
-	l.emit(token.QUOTE)
 
 	l.runUntil(`"`)
-	if l.peek() == eof {
+	if l.peek() != eof {
+		l.emit(token.TEXT)
+	} else {
 		if l.pos > l.start {
 			l.emit(token.TEXT)
 		}
@@ -200,13 +197,11 @@ func lexAttribute(l *Lexer) stateFunc {
 		return nil
 	}
 
-	l.emit(token.TEXT)
-
-	if !l.accept(`"`) {
-		l.emit(token.ERROR)
-		return nil
+	if l.accept(`"`) {
+		l.emit(token.QUOTE)
+	} else {
+		return l.errorf(`expected quote(") to end attribute value`)
 	}
-	l.emit(token.QUOTE)
 
 	l.acceptRun(" ")
 
@@ -216,4 +211,12 @@ func lexAttribute(l *Lexer) stateFunc {
 	}
 
 	return lexAttribute
+}
+
+func (l *Lexer) errorf(format string, args ...interface{}) stateFunc {
+	l.tokens <- token.Token{
+		Type:    token.ERROR,
+		Literal: fmt.Sprintf(format, args...),
+	}
+	return nil
 }
