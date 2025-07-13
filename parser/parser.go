@@ -76,11 +76,12 @@ func (p *Parser) parseComponent() *ast.Component {
 
 	comp := &ast.Component{
 		Name:  &ast.Ident{Name: p.curToken.Literal},
+		Attrs: make([]*ast.Attr, 0),
 		Nodes: make([]ast.Element, 0),
 	}
 
-	if p.isPeekToken(token.IDENT) {
-		// parse attrs
+	for p.tryPeek(token.IDENT) {
+		comp.Attrs = append(comp.Attrs, p.parseAttribute())
 	}
 
 	assert.Assert(p.isPeekToken(token.RIGHT_CHEV), "expected next token to be a right chevron")
@@ -112,6 +113,33 @@ func (p *Parser) parseComponent() *ast.Component {
 	}
 
 	return comp
+}
+
+func (p *Parser) parseAttribute() *ast.Attr {
+	assert.Assert(p.isCurToken(token.IDENT), "expected curToken to be an identifier")
+
+	attr := &ast.Attr{
+		Name: &ast.Ident{Name: p.curToken.Literal},
+	}
+
+	if !p.tryPeek(token.ASSIGN) {
+		attr.ValueLit = "true"
+		return attr
+	}
+
+	if !p.tryPeek(token.QUOTE) {
+		panic("expected quote")
+	}
+
+	if p.tryPeek(token.TEXT) {
+		attr.ValueLit = p.curToken.Literal
+	}
+
+	if !p.tryPeek(token.QUOTE) {
+		panic("expected quote")
+	}
+
+	return attr
 }
 
 func (p *Parser) isCurToken(t token.TokenType) bool {

@@ -10,7 +10,7 @@ import (
 )
 
 func TestNestedSimpleComponents(t *testing.T) {
-	input := `<div>mino</div>`
+	input := `<div class="bg-rose-500">mino</div>`
 	l := lexer.NewLexer(input)
 	p := NewParser(l)
 

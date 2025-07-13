@@ -37,7 +37,7 @@ type (
 	}
 
 	Attr struct {
-		Name     Ident
+		Name     *Ident
 		ValueLit string
 	}
 
