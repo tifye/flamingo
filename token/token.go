@@ -1,6 +1,10 @@
 package token
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/tifye/flamingo/assert"
+)
 
 type TokenType int
 
@@ -22,6 +26,28 @@ const (
 	GO_EXPR
 	GO_CODE
 )
+
+var ttStr = map[TokenType]string{
+	ERROR:      "ERROR",
+	EOF:        "EOF",
+	LEFT_CHEV:  "LEFT_CHEV",
+	RIGHT_CHEV: "RIGHT_CHEV",
+	SLASH:      "SLASH",
+	IDENT:      "IDENT",
+	ASSIGN:     "ASSIGN",
+	QUOTE:      "QUOTE",
+	COLON:      "COLON",
+	ON:         "ON",
+	TEXT:       "TEXT",
+	GO_EXPR:    "GO_EXPR",
+	GO_CODE:    "GO_CODE",
+}
+
+func (tt TokenType) String() string {
+	str, ok := ttStr[tt]
+	assert.Assert(ok, fmt.Sprintf("missing TokenType entry for %d", tt))
+	return str
+}
 
 type Token struct {
 	Type    TokenType

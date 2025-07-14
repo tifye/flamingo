@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/tifye/flamingo/assert"
 	"github.com/tifye/flamingo/ast"
 	"github.com/tifye/flamingo/lexer"
@@ -11,13 +13,21 @@ type Parser struct {
 	l         *lexer.Lexer
 	curToken  token.Token
 	peekToken token.Token
+	errors    []string
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
-	p := &Parser{l: l}
+	p := &Parser{
+		l:      l,
+		errors: []string{},
+	}
 	p.nextToken() // sets peekToken
 	p.nextToken() // sets curToken
 	return p
+}
+
+func (p *Parser) Errors() []string {
+	return p.errors
 }
 
 func (p *Parser) nextToken() {
@@ -81,11 +91,14 @@ func (p *Parser) parseComponent() *ast.Component {
 	}
 
 	for p.tryPeek(token.IDENT) {
-		comp.Attrs = append(comp.Attrs, p.parseAttribute())
+		attr := p.parseAttribute()
+		if attr != nil {
+			comp.Attrs = append(comp.Attrs, attr)
+		}
 	}
 
 	assert.Assert(p.isPeekToken(token.RIGHT_CHEV), "expected next token to be a right chevron")
-	_ = p.tryPeek(token.RIGHT_CHEV)
+	_ = p.expectPeek(token.RIGHT_CHEV)
 
 	for {
 		p.nextToken()
@@ -96,20 +109,21 @@ func (p *Parser) parseComponent() *ast.Component {
 		comp.Nodes = append(comp.Nodes, el)
 	}
 
-	if !p.tryPeek(token.SLASH) {
-		panic("expected slash")
+	if !p.expectPeek(token.SLASH) {
+		return nil
 	}
 
-	if !p.tryPeek(token.IDENT) {
-		panic("expected identifier")
+	if !p.expectPeek(token.IDENT) {
+		return nil
 	}
 
 	if p.curToken.Literal != comp.Name.Name {
-		panic("invalid closing tag")
+		p.errorf("unexpected closing tag %s, expected %s", p.curToken.Literal, comp.Name.Name)
+		return nil
 	}
 
-	if !p.tryPeek(token.RIGHT_CHEV) {
-		panic("expected right chevron")
+	if !p.expectPeek(token.RIGHT_CHEV) {
+		return nil
 	}
 
 	return comp
@@ -127,16 +141,16 @@ func (p *Parser) parseAttribute() *ast.Attr {
 		return attr
 	}
 
-	if !p.tryPeek(token.QUOTE) {
-		panic("expected quote")
+	if !p.expectPeek(token.QUOTE) {
+		return nil
 	}
 
 	if p.tryPeek(token.TEXT) {
 		attr.ValueLit = p.curToken.Literal
 	}
 
-	if !p.tryPeek(token.QUOTE) {
-		panic("expected quote")
+	if !p.expectPeek(token.QUOTE) {
+		return nil
 	}
 
 	return attr
@@ -150,11 +164,32 @@ func (p *Parser) isPeekToken(t token.TokenType) bool {
 	return p.peekToken.Type == t
 }
 
+// tryPeek advances the Parser ahead by one token
+// if p.peekToken equals the passed TokenType.
 func (p *Parser) tryPeek(t token.TokenType) bool {
 	if p.isPeekToken(t) {
 		p.nextToken()
 		return true
 	}
-
 	return false
+}
+
+// expectPeek behaves similar to tryPeek but generates an error
+// if p.peekToken is not equal to the passed TokenType.
+func (p *Parser) expectPeek(t token.TokenType) bool {
+	if !p.tryPeek(t) {
+		p.peekError(t)
+		return false
+	}
+	return true
+}
+
+func (p *Parser) peekError(t token.TokenType) {
+	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
+	p.errors = append(p.errors, msg)
+}
+
+func (p *Parser) errorf(format string, v ...any) {
+	msg := fmt.Sprintf(format, v...)
+	p.errors = append(p.errors, msg)
 }
