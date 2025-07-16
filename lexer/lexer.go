@@ -2,6 +2,8 @@ package lexer
 
 import (
 	"fmt"
+	gtoken "go/token"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -16,21 +18,26 @@ const (
 type stateFunc func(*Lexer) stateFunc
 
 type Lexer struct {
+	file   *gtoken.File
 	input  string
 	tokens chan token.Token
-	state  stateFunc
-	start  int
-	pos    int
-	width  int
+
+	state     stateFunc
+	start     int
+	lineStart int
+	pos       int
+	cur       string // for debug
+	width     int
 }
 
-func NewLexer(input string) *Lexer {
+func NewLexer(file *gtoken.File, input string) *Lexer {
 	l := &Lexer{
 		input: input,
 		// Channel must be large enough to support the largest
 		// amount of tokens that can be outputed from a single state
 		tokens: make(chan token.Token, 6),
 		state:  lexText,
+		file:   file,
 	}
 	return l
 }
@@ -57,6 +64,7 @@ func (l *Lexer) emit(typ token.TokenType) {
 	assert.Assert(l.pos > l.start, "pos must be past start")
 
 	tok := token.Token{
+		Pos:     l.file.Pos(l.pos),
 		Type:    typ,
 		Literal: l.input[l.start:l.pos],
 	}
@@ -66,18 +74,31 @@ func (l *Lexer) emit(typ token.TokenType) {
 
 func (l *Lexer) next() rune {
 	if l.pos >= len(l.input) {
-		l.width = 0
+		l.pos = len(l.input)
+		r, _ := utf8.DecodeRuneInString(l.input[len(l.input)-1:])
+		if r == '\n' {
+			l.lineStart = l.pos
+			l.file.AddLine(l.pos)
+		}
 		return eof
 	}
 
 	r, size := utf8.DecodeRuneInString(l.input[l.pos:])
 	l.width = size
 	l.pos += l.width
+	if r == '\n' {
+		l.lineStart = l.pos
+		l.file.AddLine(l.pos)
+	}
+
+	l.cur = string(r)
 	return r
 }
 
 func (l *Lexer) backup() {
 	l.pos -= l.width
+	r, _ := utf8.DecodeRuneInString(l.input[l.pos:])
+	l.cur = string(r)
 	assert.Assert(l.pos >= 0, "pos must be larger than or equal to zero")
 }
 
@@ -102,9 +123,26 @@ func (l *Lexer) acceptRun(valid string) {
 }
 
 func (l *Lexer) runUntil(valid string) {
-	for next := l.next(); !strings.ContainsRune(valid, next) && next != eof; next = l.next() {
+	next := l.next()
+	if next == eof {
+		return
+	}
+
+	for {
+		if strings.ContainsRune(valid, next) || next == eof {
+			break
+		}
+		next = l.next()
 	}
 	l.backup()
+}
+
+func (l *Lexer) errorf(format string, args ...interface{}) stateFunc {
+	l.tokens <- token.Token{
+		Type:    token.ERROR,
+		Literal: fmt.Sprintf(format, args...),
+	}
+	return nil
 }
 
 func lexText(l *Lexer) stateFunc {
@@ -130,7 +168,7 @@ func lexTag(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
 	ch := l.next()
-	assert.Assert(ch == '<', "expected '<'")
+	assert.Assert(ch == '<', fmt.Sprintf("expected '<', got: %s", strconv.QuoteRune(ch)))
 	l.emit(token.LEFT_CHEV)
 
 	if l.accept("/") {
@@ -211,12 +249,4 @@ func lexAttribute(l *Lexer) stateFunc {
 	}
 
 	return lexAttribute
-}
-
-func (l *Lexer) errorf(format string, args ...interface{}) stateFunc {
-	l.tokens <- token.Token{
-		Type:    token.ERROR,
-		Literal: fmt.Sprintf(format, args...),
-	}
-	return nil
 }

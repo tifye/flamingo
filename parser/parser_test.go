@@ -1,6 +1,7 @@
 package parser
 
 import (
+	gtoken "go/token"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,9 @@ import (
 
 func TestNestedSimpleComponents(t *testing.T) {
 	input := `<div class="bg-rose-500">mino</div>`
-	l := lexer.NewLexer(input)
+	fset := gtoken.NewFileSet()
+	f := fset.AddFile("", fset.Base(), len(input))
+	l := lexer.NewLexer(f, input)
 	p := NewParser(l)
 
 	root := p.Parse()

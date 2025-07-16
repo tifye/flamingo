@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	gtoken "go/token"
 	"strings"
 	"sync/atomic"
 
@@ -11,7 +12,9 @@ import (
 )
 
 func Compile(input string) string {
-	l := lexer.NewLexer(input)
+	fset := gtoken.NewFileSet()
+	f := fset.AddFile("", fset.Base(), len(input))
+	l := lexer.NewLexer(f, input)
 	p := parser.NewParser(l)
 	root := p.Parse()
 

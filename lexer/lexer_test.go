@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	gtoken "go/token"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,8 +9,10 @@ import (
 )
 
 func TestNextToken(t *testing.T) {
+	fset := gtoken.NewFileSet()
 	t.Run(`<div class="p-4">mino</div>`, func(t *testing.T) {
 		input := `<div class="p-4">mino</div>`
+		f := fset.AddFile("", fset.Base(), len(input))
 
 		tests := []struct {
 			expectedType token.TokenType
@@ -30,7 +33,7 @@ func TestNextToken(t *testing.T) {
 			{token.EOF},
 		}
 
-		l := NewLexer(input)
+		l := NewLexer(f, input)
 		for i, tt := range tests {
 			tok := l.NextToken()
 			assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)
@@ -39,6 +42,7 @@ func TestNextToken(t *testing.T) {
 
 	t.Run(`<div>mino<div>`, func(t *testing.T) {
 		input := `<div>mino</div>`
+		f := fset.AddFile("", fset.Base(), len(input))
 
 		tests := []struct {
 			expectedType token.TokenType
@@ -54,7 +58,7 @@ func TestNextToken(t *testing.T) {
 			{token.EOF},
 		}
 
-		l := NewLexer(input)
+		l := NewLexer(f, input)
 		for i, tt := range tests {
 			tok := l.NextToken()
 			assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)
@@ -63,6 +67,7 @@ func TestNextToken(t *testing.T) {
 
 	t.Run(`<div><span>Meep</span></div>`, func(t *testing.T) {
 		input := `<div><span>Meep</span></div>`
+		f := fset.AddFile("", fset.Base(), len(input))
 
 		tests := []struct {
 			expectedType token.TokenType
@@ -85,7 +90,7 @@ func TestNextToken(t *testing.T) {
 			{token.EOF},
 		}
 
-		l := NewLexer(input)
+		l := NewLexer(f, input)
 		for i, tt := range tests {
 			tok := l.NextToken()
 			assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)
@@ -95,6 +100,8 @@ func TestNextToken(t *testing.T) {
 
 func TestTxtToken(t *testing.T) {
 	input := `<div>`
+	fset := gtoken.NewFileSet()
+	f := fset.AddFile("", fset.Base(), len(input))
 
 	tests := []struct {
 		expectedType token.TokenType
@@ -105,7 +112,7 @@ func TestTxtToken(t *testing.T) {
 		{token.EOF},
 	}
 
-	l := NewLexer(input)
+	l := NewLexer(f, input)
 	for i, tt := range tests {
 		tok := l.NextToken()
 		assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)

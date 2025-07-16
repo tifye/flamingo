@@ -2,11 +2,14 @@ package token
 
 import (
 	"fmt"
+	gtoken "go/token"
 
 	"github.com/tifye/flamingo/assert"
 )
 
 type TokenType int
+
+type Pos = gtoken.Pos
 
 const (
 	ERROR TokenType = iota
@@ -50,6 +53,7 @@ func (tt TokenType) String() string {
 }
 
 type Token struct {
+	Pos     Pos
 	Type    TokenType
 	Literal string
 }
