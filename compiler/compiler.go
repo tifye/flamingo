@@ -11,10 +11,8 @@ import (
 	"github.com/tifye/flamingo/parser"
 )
 
-func Compile(input string) string {
-	fset := gtoken.NewFileSet()
-	f := fset.AddFile("", fset.Base(), len(input))
-	l := lexer.NewLexer(f, input)
+func Compile(pkg string, file *gtoken.File, input string) string {
+	l := lexer.NewLexer(file, input)
 	p := parser.NewParser(l)
 	root := p.Parse()
 
@@ -22,11 +20,22 @@ func Compile(input string) string {
 		outb:    &strings.Builder{},
 		renders: make([]string, 0),
 	}
+
 	ast.Walk(w, root)
+
+	w.write("\n")
 	for _, r := range w.renders {
 		fmt.Fprintln(w.outb, r)
 	}
-	return w.outb.String()
+
+	str := `
+package %s
+
+func %s(renderer render.Renderer) {
+%s}
+`
+
+	return fmt.Sprintf(str, pkg, file.Name(), w.outb.String())
 }
 
 type walker struct {
@@ -45,24 +54,25 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		if w.curComp != nil {
 			w.parComp = w.curComp
 			w.parCompId = w.curCompId
+			w.write("\n")
 		}
 
 		w.curComp = nt
 		w.curCompId = fmt.Sprintf("%s%d", w.curComp.Name.Name, w.idCounter.Add(1))
-		w.write("%s := renderer.NewComponent(\"%s\")\n", w.curCompId, nt.Name.Name)
+		w.write("\t%s := renderer.NewComponent(\"%s\")\n", w.curCompId, nt.Name.Name)
 
 		if w.parComp != nil {
-			w.renders = append(w.renders, fmt.Sprintf("renderer.Append(%s, %s)", w.parCompId, w.curCompId))
+			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Append(%s, %s)", w.parCompId, w.curCompId))
 		} else {
-			w.renders = append(w.renders, fmt.Sprintf("renderer.Render(%s)", w.curCompId))
+			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Render(%s)", w.curCompId))
 		}
 
 		return w
 	case *ast.Attr:
-		w.write("%s.SetAttribute(\"%s\", \"%s\")\n", w.curCompId, nt.Name.Name, nt.ValueLit)
+		w.write("\t%s.SetAttribute(\"%s\", \"%s\")\n", w.curCompId, nt.Name.Name, nt.ValueLit)
 		return w
 	case *ast.Text:
-		w.write("%s.SetAttribute(\"innerText\", \"%s\")\n", w.curCompId, nt.Lit)
+		w.write("\t%s.SetAttribute(\"innerText\", \"%s\")\n", w.curCompId, nt.Lit)
 		return w
 	case *ast.Fragment, *ast.Ident, *ast.Root:
 		return w
