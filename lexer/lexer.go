@@ -26,7 +26,6 @@ type Lexer struct {
 	start     int
 	lineStart int
 	pos       int
-	cur       string // for debug
 	width     int
 }
 
@@ -90,15 +89,11 @@ func (l *Lexer) next() rune {
 		l.lineStart = l.pos
 		l.file.AddLine(l.pos)
 	}
-
-	l.cur = string(r)
 	return r
 }
 
 func (l *Lexer) backup() {
 	l.pos -= l.width
-	r, _ := utf8.DecodeRuneInString(l.input[l.pos:])
-	l.cur = string(r)
 	assert.Assert(l.pos >= 0, "pos must be larger than or equal to zero")
 }
 
@@ -124,16 +119,16 @@ func (l *Lexer) acceptRun(valid string) {
 
 func (l *Lexer) runUntil(valid string) {
 	next := l.next()
-	if next == eof {
-		return
-	}
-
 	for {
 		if strings.ContainsRune(valid, next) || next == eof {
 			break
 		}
 		next = l.next()
 	}
+	if next == eof {
+		return
+	}
+
 	l.backup()
 }
 
@@ -145,10 +140,33 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFunc {
 	return nil
 }
 
+func (l *Lexer) skipWhitespace() {
+	r := l.next()
+	for r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+		r = l.next()
+	}
+
+	if r == eof {
+		l.discard()
+		return
+	}
+
+	l.backup()
+	l.discard()
+}
+
+func (l *Lexer) discard() {
+	l.start = l.pos
+}
+
 func lexText(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
+	// todo: skipWhitespace after text
+	l.skipWhitespace()
+
 	l.runUntil("<")
+
 	if l.peek() == eof {
 		if l.pos > l.start {
 			l.emit(token.TEXT)
@@ -200,6 +218,8 @@ func lexTag(l *Lexer) stateFunc {
 
 func lexAttribute(l *Lexer) stateFunc {
 	assert.Assert(!l.accept(" "), "expected no empty characters")
+
+	l.skipWhitespace()
 
 	l.runUntil("=")
 	if l.peek() == eof {

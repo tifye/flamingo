@@ -3,13 +3,18 @@ package compiler
 import (
 	"fmt"
 	gtoken "go/token"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestCompiler(t *testing.T) {
-	input := `<div class="bg-rose-500"><span>mino</span></div>`
+	fileb, err := os.ReadFile("testdata/Mino.flamingo")
+	require.NoError(t, err)
+
 	fset := gtoken.NewFileSet()
-	file := fset.AddFile("Mino", fset.Base(), len(input))
-	output := Compile("test", file, input)
+	file := fset.AddFile("Mino", fset.Base(), len(fileb))
+	output := Compile("test", file, string(fileb))
 	fmt.Println(output)
 }

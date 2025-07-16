@@ -31,6 +31,11 @@ func Compile(pkg string, file *gtoken.File, input string) string {
 	str := `
 package %s
 
+import (
+	"github.com/tifye/flamingo/render"
+	"github.com/tifye/flamingo/web"
+)
+
 func %s(renderer render.Renderer) {
 %s}
 `

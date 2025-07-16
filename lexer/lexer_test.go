@@ -36,7 +36,7 @@ func TestNextToken(t *testing.T) {
 		l := NewLexer(f, input)
 		for i, tt := range tests {
 			tok := l.NextToken()
-			assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)
+			assert.Equal(t, tt.expectedType.String(), tok.Type.String(), "Token idx %d", i)
 		}
 	})
 
@@ -61,7 +61,7 @@ func TestNextToken(t *testing.T) {
 		l := NewLexer(f, input)
 		for i, tt := range tests {
 			tok := l.NextToken()
-			assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)
+			assert.Equal(t, tt.expectedType.String(), tok.Type.String(), "Token idx %d", i)
 		}
 	})
 
@@ -93,13 +93,17 @@ func TestNextToken(t *testing.T) {
 		l := NewLexer(f, input)
 		for i, tt := range tests {
 			tok := l.NextToken()
-			assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)
+			assert.Equal(t, tt.expectedType.String(), tok.Type.String(), "Token idx %d", i)
 		}
 	})
 }
 
 func TestTxtToken(t *testing.T) {
-	input := `<div>`
+	input := `
+<div class="meep">
+	mino
+	meep
+</div>`
 	fset := gtoken.NewFileSet()
 	f := fset.AddFile("", fset.Base(), len(input))
 
@@ -107,6 +111,16 @@ func TestTxtToken(t *testing.T) {
 		expectedType token.TokenType
 	}{
 		{token.LEFT_CHEV},
+		{token.IDENT},
+		{token.IDENT},
+		{token.ASSIGN},
+		{token.QUOTE},
+		{token.TEXT},
+		{token.QUOTE},
+		{token.RIGHT_CHEV},
+		{token.TEXT},
+		{token.LEFT_CHEV},
+		{token.SLASH},
 		{token.IDENT},
 		{token.RIGHT_CHEV},
 		{token.EOF},
