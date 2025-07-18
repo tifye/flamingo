@@ -3,7 +3,7 @@ package compiler
 import (
 	"fmt"
 	gtoken "go/token"
-	"strings"
+	"io"
 	"sync/atomic"
 
 	"github.com/tifye/flamingo/ast"
@@ -11,36 +11,41 @@ import (
 	"github.com/tifye/flamingo/parser"
 )
 
-func CompileFile(pkg string, file *gtoken.File, input string) string {
+func CompileFile(pkg string, file *gtoken.File, input string, output io.Writer) error {
 	l := lexer.NewLexer(file, input)
 	p := parser.NewParser(l)
 	root := p.Parse()
 
+	if len(p.Errors()) > 0 {
+		return fmt.Errorf("one or more parser errors: %s", p.Errors())
+	}
+
+	imports := [...]string{
+		"github.com/tifye/flamingo/render",
+		// "github.com/tifye/flamingo/web",
+	}
+
 	w := &walker{
-		outb:    &strings.Builder{},
+		output:  output,
 		renders: make([]string, 0),
 	}
 
-	ast.Walk(w, root)
-
-	w.write("\n")
-	for _, r := range w.renders {
-		fmt.Fprintln(w.outb, r)
+	fmt.Fprintf(output, "package %s\n\n", pkg)
+	fmt.Fprint(output, "import (\n")
+	for _, imp := range imports {
+		fmt.Fprintf(output, "\t\"%s\"\n", imp)
 	}
+	fmt.Fprint(output, ")\n\n")
+	fmt.Fprintf(output, "func %s(renderer render.Renderer) {\n", file.Name())
 
-	str := `
-package %s
+	ast.Walk(w, root)
+	fmt.Fprint(output, "\n")
+	for _, r := range w.renders {
+		fmt.Fprintln(w.output, r)
+	}
+	fmt.Fprint(output, "}")
 
-import (
-	"github.com/tifye/flamingo/render"
-	"github.com/tifye/flamingo/web"
-)
-
-func %s(renderer render.Renderer) {
-%s}
-`
-
-	return fmt.Sprintf(str, pkg, file.Name(), w.outb.String())
+	return nil
 }
 
 type walker struct {
@@ -49,7 +54,7 @@ type walker struct {
 	parCompId string
 	curComp   *ast.Component
 	curCompId string
-	outb      *strings.Builder
+	output    io.Writer
 	renders   []string
 }
 
@@ -77,7 +82,7 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		w.write("\t%s.SetAttribute(\"%s\", \"%s\")\n", w.curCompId, nt.Name.Name, nt.ValueLit)
 		return w
 	case *ast.Text:
-		w.write("\t%s.SetAttribute(\"innerText\", \"%s\")\n", w.curCompId, nt.Lit)
+		w.write("\t%s.SetAttribute(\"innerText\", `%s`)\n", w.curCompId, nt.Lit)
 		return w
 	case *ast.Fragment, *ast.Ident, *ast.Root:
 		return w
@@ -87,5 +92,5 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 }
 
 func (w *walker) write(format string, a ...any) {
-	fmt.Fprintf(w.outb, format, a...)
+	fmt.Fprintf(w.output, format, a...)
 }
