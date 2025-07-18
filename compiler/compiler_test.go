@@ -15,6 +15,6 @@ func TestCompiler(t *testing.T) {
 
 	fset := gtoken.NewFileSet()
 	file := fset.AddFile("Mino", fset.Base(), len(fileb))
-	output := Compile("test", file, string(fileb))
+	output := CompileFile("test", file, string(fileb))
 	fmt.Println(output)
 }

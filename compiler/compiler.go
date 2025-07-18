@@ -11,7 +11,7 @@ import (
 	"github.com/tifye/flamingo/parser"
 )
 
-func Compile(pkg string, file *gtoken.File, input string) string {
+func CompileFile(pkg string, file *gtoken.File, input string) string {
 	l := lexer.NewLexer(file, input)
 	p := parser.NewParser(l)
 	root := p.Parse()
