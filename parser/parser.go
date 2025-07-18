@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tifye/flamingo/assert"
 	"github.com/tifye/flamingo/ast"
@@ -65,7 +66,7 @@ func (p *Parser) Parse() *ast.Root {
 func (p *Parser) parseElement() ast.Element {
 	switch p.curToken.Type {
 	case token.TEXT:
-		return &ast.Text{Lit: p.curToken.Literal}
+		return &ast.Text{Lit: strings.TrimSpace(p.curToken.Literal)}
 	case token.LEFT_CHEV:
 		if p.isPeekToken(token.SLASH) {
 			return nil
