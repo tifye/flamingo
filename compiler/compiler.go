@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -69,8 +70,9 @@ func CompileFile(pkg string, file string, root *ast.Root, input string, output i
 	}
 
 	w := &walker{
-		output:  output,
-		renders: make([]string, 0),
+		output:    output,
+		renders:   make([]string, 0),
+		compStack: make([]string, 0),
 	}
 
 	fmt.Fprintf(output, "package %s\n\n", pkg)
@@ -81,7 +83,8 @@ func CompileFile(pkg string, file string, root *ast.Root, input string, output i
 	fmt.Fprint(output, ")\n\n")
 	fmt.Fprintf(output, "func %s(renderer render.Renderer) {\n", file)
 
-	ast.Walk(w, root)
+	walk(w, root)
+
 	fmt.Fprint(output, "\n")
 	for _, r := range w.renders {
 		fmt.Fprintln(w.output, r)
@@ -93,10 +96,7 @@ func CompileFile(pkg string, file string, root *ast.Root, input string, output i
 
 type walker struct {
 	idCounter atomic.Int32
-	parComp   *ast.Component
-	parCompId string
-	curComp   *ast.Component
-	curCompId string
+	compStack []string
 	output    io.Writer
 	renders   []string
 }
@@ -104,28 +104,26 @@ type walker struct {
 func (w *walker) Visit(n ast.Node) ast.Visitor {
 	switch nt := n.(type) {
 	case *ast.Component:
-		if w.curComp != nil {
-			w.parComp = w.curComp
-			w.parCompId = w.curCompId
+		if len(w.compStack) > 1 {
 			w.write("\n")
 		}
 
-		w.curComp = nt
-		w.curCompId = fmt.Sprintf("%s%d", w.curComp.Name.Name, w.idCounter.Add(1))
-		w.write("\t%s := renderer.NewComponent(\"%s\")\n", w.curCompId, nt.Name.Name)
+		w.write("\t%s := renderer.NewComponent(\"%s\")\n", w.curCompId(), nt.Name.Name)
 
-		if w.parComp != nil {
-			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Append(%s, %s)", w.parCompId, w.curCompId))
+		if len(w.compStack) > 1 {
+			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Append(%s, %s)", w.parCompId(), w.curCompId()))
 		} else {
-			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Render(%s)", w.curCompId))
+			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Render(%s)", w.curCompId()))
 		}
 
 		return w
 	case *ast.Attr:
-		w.write("\t%s.SetAttribute(\"%s\", \"%s\")\n", w.curCompId, nt.Name.Name, nt.ValueLit)
+		assert.Assert(len(w.compStack) > 0, "expected to be inside a component")
+		w.write("\t%s.SetAttribute(\"%s\", \"%s\")\n", w.curCompId(), nt.Name.Name, nt.ValueLit)
 		return w
 	case *ast.Text:
-		w.write("\t%s.SetAttribute(\"innerText\", `%s`)\n", w.curCompId, nt.Lit)
+		assert.Assert(len(w.compStack) > 0, "expected to be inside a component")
+		w.write("\t%s.SetAttribute(\"innerText\", `%s`)\n", w.curCompId(), nt.Lit)
 		return w
 	case *ast.Fragment, *ast.Ident, *ast.Root:
 		return w
@@ -134,6 +132,51 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 	return w
 }
 
+func (w *walker) curCompId() string {
+	assert.Assert(len(w.compStack) > 0, "expected to have comps in stack")
+	return w.compStack[len(w.compStack)-1]
+}
+
+func (w *walker) parCompId() string {
+	assert.Assert(len(w.compStack) > 1, "expected to have more than one comps in stack")
+	return w.compStack[len(w.compStack)-2]
+}
+
 func (w *walker) write(format string, a ...any) {
 	fmt.Fprintf(w.output, format, a...)
+}
+
+func walkList[N ast.Node](v *walker, list []N) {
+	for _, node := range list {
+		walk(v, node)
+	}
+}
+
+func walk(v *walker, node ast.Node) {
+	if comp, ok := node.(*ast.Component); ok {
+		id := fmt.Sprintf("%s%d", comp.Name.Name, v.idCounter.Add(1))
+		v.compStack = append(v.compStack, id)
+		defer func() {
+			v.compStack = slices.Delete(v.compStack, len(v.compStack)-1, len(v.compStack))
+		}()
+	}
+
+	v.Visit(node)
+
+	switch n := node.(type) {
+	case *ast.Root:
+		walk(v, n.Fragment)
+	case *ast.Fragment:
+		walkList(v, n.Nodes)
+	case *ast.Component:
+		walk(v, n.Name)
+		walkList(v, n.Attrs)
+		walkList(v, n.Nodes)
+	case *ast.Attr:
+		walk(v, n.Name)
+	case *ast.Text:
+	case *ast.Ident:
+	default:
+		return
+	}
 }
