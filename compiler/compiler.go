@@ -4,12 +4,56 @@ import (
 	"fmt"
 	gtoken "go/token"
 	"io"
+	"io/fs"
+	"os"
+	"strings"
 	"sync/atomic"
 
+	"github.com/tifye/flamingo/assert"
 	"github.com/tifye/flamingo/ast"
 	"github.com/tifye/flamingo/lexer"
 	"github.com/tifye/flamingo/parser"
 )
+
+func CompileDir(pkg string, fset *gtoken.FileSet, path string, output func(fs.FileInfo) (io.WriteCloser, error)) error {
+	assert.AssertNotNil(output)
+
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("read dir: %s", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".flamingo") {
+			continue
+		}
+
+		finfo, err := entry.Info()
+		if err != nil {
+			return fmt.Errorf("read file info for %s: %s", entry.Name(), err)
+		}
+
+		w, err := output(finfo)
+		if err != nil {
+			return err
+		}
+
+		inputb, err := os.ReadFile(entry.Name())
+		if err != nil {
+			return err
+		}
+
+		name := strings.TrimSuffix(entry.Name(), ".flamingo")
+		file := fset.AddFile(name, fset.Base(), len(inputb))
+		if err := CompileFile(pkg, file, string(inputb), w); err != nil {
+			_ = w.Close()
+			return err
+		}
+		_ = w.Close()
+	}
+
+	return nil
+}
 
 func CompileFile(pkg string, file *gtoken.File, input string, output io.Writer) error {
 	l := lexer.NewLexer(file, input)
