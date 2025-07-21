@@ -104,10 +104,6 @@ type walker struct {
 func (w *walker) Visit(n ast.Node) ast.Visitor {
 	switch nt := n.(type) {
 	case *ast.Component:
-		if len(w.compStack) > 1 {
-			w.write("\n")
-		}
-
 		w.write("\t%s := renderer.NewComponent(\"%s\")\n", w.curCompId(), nt.Name.Name)
 
 		if len(w.compStack) > 1 {
@@ -146,34 +142,35 @@ func (w *walker) write(format string, a ...any) {
 	fmt.Fprintf(w.output, format, a...)
 }
 
-func walkList[N ast.Node](v *walker, list []N) {
+func walkList[N ast.Node](w *walker, list []N) {
 	for _, node := range list {
-		walk(v, node)
+		walk(w, node)
 	}
 }
 
-func walk(v *walker, node ast.Node) {
+func walk(w *walker, node ast.Node) {
 	if comp, ok := node.(*ast.Component); ok {
-		id := fmt.Sprintf("%s%d", comp.Name.Name, v.idCounter.Add(1))
-		v.compStack = append(v.compStack, id)
+		id := fmt.Sprintf("%s%d", comp.Name.Name, w.idCounter.Add(1))
+		w.compStack = append(w.compStack, id)
 		defer func() {
-			v.compStack = slices.Delete(v.compStack, len(v.compStack)-1, len(v.compStack))
+			w.write("\n")
+			w.compStack = slices.Delete(w.compStack, len(w.compStack)-1, len(w.compStack))
 		}()
 	}
 
-	v.Visit(node)
+	w.Visit(node)
 
 	switch n := node.(type) {
 	case *ast.Root:
-		walk(v, n.Fragment)
+		walk(w, n.Fragment)
 	case *ast.Fragment:
-		walkList(v, n.Nodes)
+		walkList(w, n.Nodes)
 	case *ast.Component:
-		walk(v, n.Name)
-		walkList(v, n.Attrs)
-		walkList(v, n.Nodes)
+		walk(w, n.Name)
+		walkList(w, n.Attrs)
+		walkList(w, n.Nodes)
 	case *ast.Attr:
-		walk(v, n.Name)
+		walk(w, n.Name)
 	case *ast.Text:
 	case *ast.Ident:
 	default:
