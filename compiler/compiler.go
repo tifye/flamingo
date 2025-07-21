@@ -45,7 +45,14 @@ func CompileDir(pkg string, fset *gtoken.FileSet, path string, output func(fs.Fi
 
 		name := strings.TrimSuffix(entry.Name(), ".flamingo")
 		file := fset.AddFile(name, fset.Base(), len(inputb))
-		if err := CompileFile(pkg, file, string(inputb), w); err != nil {
+		l := lexer.NewLexer(file, string(inputb))
+		p := parser.NewParser(l)
+		root := p.Parse()
+		if len(p.Errors()) > 0 {
+			return fmt.Errorf("one or more parser errors: %s", p.Errors())
+		}
+
+		if err := CompileFile(pkg, name, root, string(inputb), w); err != nil {
 			_ = w.Close()
 			return err
 		}
@@ -55,15 +62,7 @@ func CompileDir(pkg string, fset *gtoken.FileSet, path string, output func(fs.Fi
 	return nil
 }
 
-func CompileFile(pkg string, file *gtoken.File, input string, output io.Writer) error {
-	l := lexer.NewLexer(file, input)
-	p := parser.NewParser(l)
-	root := p.Parse()
-
-	if len(p.Errors()) > 0 {
-		return fmt.Errorf("one or more parser errors: %s", p.Errors())
-	}
-
+func CompileFile(pkg string, file string, root *ast.Root, input string, output io.Writer) error {
 	imports := [...]string{
 		"github.com/tifye/flamingo/render",
 		// "github.com/tifye/flamingo/web",
@@ -80,7 +79,7 @@ func CompileFile(pkg string, file *gtoken.File, input string, output io.Writer) 
 		fmt.Fprintf(output, "\t\"%s\"\n", imp)
 	}
 	fmt.Fprint(output, ")\n\n")
-	fmt.Fprintf(output, "func %s(renderer render.Renderer) {\n", file.Name())
+	fmt.Fprintf(output, "func %s(renderer render.Renderer) {\n", file)
 
 	ast.Walk(w, root)
 	fmt.Fprint(output, "\n")
