@@ -162,11 +162,8 @@ func (l *Lexer) discard() {
 func lexText(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
-	// todo: skipWhitespace after text
 	l.skipWhitespace()
-
 	l.runUntil("<")
-
 	if l.peek() == eof {
 		if l.pos > l.start {
 			l.emit(token.TEXT)
