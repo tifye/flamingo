@@ -36,8 +36,8 @@ func (p *Parser) nextToken() {
 	p.peekToken = p.l.NextToken()
 }
 
-func (p *Parser) Parse() *ast.Root {
-	root := &ast.Root{}
+func (p *Parser) Parse() *ast.File {
+	root := &ast.File{}
 	root.Fragment = &ast.Fragment{
 		Nodes: make([]ast.Element, 0),
 	}

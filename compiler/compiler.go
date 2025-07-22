@@ -53,7 +53,7 @@ func CompileDir(pkg string, fset *gtoken.FileSet, path string, output func(fs.Fi
 			return fmt.Errorf("one or more parser errors: %s", p.Errors())
 		}
 
-		if err := CompileFile(pkg, name, root, string(inputb), w); err != nil {
+		if err := CompileFile(pkg, name, root, w); err != nil {
 			_ = w.Close()
 			return err
 		}
@@ -63,7 +63,7 @@ func CompileDir(pkg string, fset *gtoken.FileSet, path string, output func(fs.Fi
 	return nil
 }
 
-func CompileFile(pkg string, file string, root *ast.Root, input string, output io.Writer) error {
+func CompileFile(pkg string, file string, root *ast.File, output io.Writer) error {
 	imports := [...]string{
 		"github.com/tifye/flamingo/render",
 		// "github.com/tifye/flamingo/web",
@@ -125,7 +125,7 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		assert.Assert(len(w.compStack) > 0, "expected to be inside a component")
 		w.write("\t%s.SetAttribute(\"innerText\", `%s`)\n", w.curCompId(), nt.Lit)
 		return w
-	case *ast.Fragment, *ast.Ident, *ast.Root:
+	case *ast.Fragment, *ast.Ident, *ast.File:
 		return w
 	}
 
@@ -164,7 +164,7 @@ func walk(v *walker, node ast.Node) {
 	v.Visit(node)
 
 	switch n := node.(type) {
-	case *ast.Root:
+	case *ast.File:
 		walk(v, n.Fragment)
 	case *ast.Fragment:
 		walkList(v, n.Nodes)

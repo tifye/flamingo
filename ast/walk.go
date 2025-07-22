@@ -16,7 +16,7 @@ func Walk(v Visitor, node Node) {
 	}
 
 	switch n := node.(type) {
-	case *Root:
+	case *File:
 		Walk(v, n.Fragment)
 	case *Fragment:
 		walkList(v, n.Nodes)

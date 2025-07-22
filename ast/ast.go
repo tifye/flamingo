@@ -17,8 +17,8 @@ type Element interface {
 }
 
 type (
-	// Root of every component file
-	Root struct {
+	// A File node represents a single Flamingo component
+	File struct {
 		Fragment *Fragment
 	}
 
@@ -56,7 +56,7 @@ func (r *Fragment) TokenLit() string {
 	}
 	return ""
 }
-func (r *Root) TokenLit() string {
+func (r *File) TokenLit() string {
 	if r.Fragment != nil {
 		return r.Fragment.TokenLit()
 	}
