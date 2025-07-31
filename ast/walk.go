@@ -20,7 +20,7 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Fragment)
 	case *Fragment:
 		walkList(v, n.Nodes)
-	case *Component:
+	case *Tag:
 		Walk(v, n.Name)
 		walkList(v, n.Attrs)
 		walkList(v, n.Nodes)

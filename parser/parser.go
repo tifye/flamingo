@@ -77,7 +77,7 @@ func (p *Parser) parseElement() ast.Element {
 	}
 }
 
-func (p *Parser) parseComponent() *ast.Component {
+func (p *Parser) parseComponent() *ast.Tag {
 	assert.Assert(p.isCurToken(token.LEFT_CHEV), "expected left chevron")
 	assert.Assert(p.isPeekToken(token.IDENT), "expected next token to be an identifier")
 
@@ -85,7 +85,7 @@ func (p *Parser) parseComponent() *ast.Component {
 		return nil
 	}
 
-	comp := &ast.Component{
+	comp := &ast.Tag{
 		Name:  &ast.Ident{Name: p.curToken.Literal},
 		Attrs: make([]*ast.Attr, 0),
 		Nodes: make([]ast.Element, 0),

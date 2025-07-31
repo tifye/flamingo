@@ -103,7 +103,7 @@ type walker struct {
 
 func (w *walker) Visit(n ast.Node) ast.Visitor {
 	switch nt := n.(type) {
-	case *ast.Component:
+	case *ast.Tag:
 		if len(w.compStack) > 0 {
 			w.write("\n")
 		}
@@ -153,7 +153,7 @@ func walkList[N ast.Node](v *walker, list []N) {
 }
 
 func walk(v *walker, node ast.Node) {
-	if comp, ok := node.(*ast.Component); ok {
+	if comp, ok := node.(*ast.Tag); ok {
 		id := fmt.Sprintf("%s%d", comp.Name.Name, v.idCounter.Add(1))
 		v.compStack = append(v.compStack, id)
 		defer func() {
@@ -168,7 +168,7 @@ func walk(v *walker, node ast.Node) {
 		walk(v, n.Fragment)
 	case *ast.Fragment:
 		walkList(v, n.Nodes)
-	case *ast.Component:
+	case *ast.Tag:
 		walk(v, n.Name)
 		walkList(v, n.Attrs)
 		walkList(v, n.Nodes)

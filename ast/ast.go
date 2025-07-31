@@ -25,7 +25,7 @@ type (
 		Nodes []Element
 	}
 
-	Component struct {
+	Tag struct {
 		Name  *Ident
 		Attrs []*Attr
 		Nodes []Element
@@ -46,6 +46,6 @@ type (
 )
 
 // elementNode() makes sure that only element nodes can be assigned to an Element
-func (*Component) elementNode() {}
-func (*Text) elementNode()      {}
-func (*Fragment) elementNode()  {}
+func (*Tag) elementNode()      {}
+func (*Text) elementNode()     {}
+func (*Fragment) elementNode() {}
