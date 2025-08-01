@@ -17,19 +17,19 @@ func TestNextToken(t *testing.T) {
 		tests := []struct {
 			expectedType token.TokenType
 		}{
-			{token.LEFT_CHEV},
+			{token.LEFT_CHEVRON},
 			{token.IDENT},
 			{token.IDENT},
 			{token.ASSIGN},
 			{token.QUOTE},
 			{token.TEXT},
 			{token.QUOTE},
-			{token.RIGHT_CHEV},
+			{token.RIGHT_CHEVRON},
 			{token.TEXT},
-			{token.LEFT_CHEV},
+			{token.LEFT_CHEVRON},
 			{token.SLASH},
 			{token.IDENT},
-			{token.RIGHT_CHEV},
+			{token.RIGHT_CHEVRON},
 			{token.EOF},
 		}
 
@@ -47,14 +47,14 @@ func TestNextToken(t *testing.T) {
 		tests := []struct {
 			expectedType token.TokenType
 		}{
-			{token.LEFT_CHEV},
+			{token.LEFT_CHEVRON},
 			{token.IDENT},
-			{token.RIGHT_CHEV},
+			{token.RIGHT_CHEVRON},
 			{token.TEXT},
-			{token.LEFT_CHEV},
+			{token.LEFT_CHEVRON},
 			{token.SLASH},
 			{token.IDENT},
-			{token.RIGHT_CHEV},
+			{token.RIGHT_CHEVRON},
 			{token.EOF},
 		}
 
@@ -72,21 +72,21 @@ func TestNextToken(t *testing.T) {
 		tests := []struct {
 			expectedType token.TokenType
 		}{
-			{token.LEFT_CHEV},
+			{token.LEFT_CHEVRON},
 			{token.IDENT},
-			{token.RIGHT_CHEV},
-			{token.LEFT_CHEV},
+			{token.RIGHT_CHEVRON},
+			{token.LEFT_CHEVRON},
 			{token.IDENT},
-			{token.RIGHT_CHEV},
+			{token.RIGHT_CHEVRON},
 			{token.TEXT},
-			{token.LEFT_CHEV},
+			{token.LEFT_CHEVRON},
 			{token.SLASH},
 			{token.IDENT},
-			{token.RIGHT_CHEV},
-			{token.LEFT_CHEV},
+			{token.RIGHT_CHEVRON},
+			{token.LEFT_CHEVRON},
 			{token.SLASH},
 			{token.IDENT},
-			{token.RIGHT_CHEV},
+			{token.RIGHT_CHEVRON},
 			{token.EOF},
 		}
 
@@ -110,19 +110,19 @@ func TestTxtToken(t *testing.T) {
 	tests := []struct {
 		expectedType token.TokenType
 	}{
-		{token.LEFT_CHEV},
+		{token.LEFT_CHEVRON},
 		{token.IDENT},
 		{token.IDENT},
 		{token.ASSIGN},
 		{token.QUOTE},
 		{token.TEXT},
 		{token.QUOTE},
-		{token.RIGHT_CHEV},
+		{token.RIGHT_CHEVRON},
 		{token.TEXT},
-		{token.LEFT_CHEV},
+		{token.LEFT_CHEVRON},
 		{token.SLASH},
 		{token.IDENT},
-		{token.RIGHT_CHEV},
+		{token.RIGHT_CHEVRON},
 		{token.EOF},
 	}
 

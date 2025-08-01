@@ -184,7 +184,7 @@ func lexTag(l *Lexer) stateFunc {
 
 	ch := l.next()
 	assert.Assert(ch == '<', fmt.Sprintf("expected '<', got: %s", strconv.QuoteRune(ch)))
-	l.emit(token.LEFT_CHEV)
+	l.emit(token.LEFT_CHEVRON)
 
 	if l.accept("/") {
 		l.emit(token.SLASH)
@@ -206,7 +206,7 @@ func lexTag(l *Lexer) stateFunc {
 	l.acceptRun(" ")
 
 	if l.accept(">") {
-		l.emit(token.RIGHT_CHEV)
+		l.emit(token.RIGHT_CHEVRON)
 		return lexText
 	}
 
@@ -261,7 +261,7 @@ func lexAttribute(l *Lexer) stateFunc {
 	l.acceptRun(" ")
 
 	if l.accept(">") {
-		l.emit(token.RIGHT_CHEV)
+		l.emit(token.RIGHT_CHEVRON)
 		return lexText
 	}
 

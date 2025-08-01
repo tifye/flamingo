@@ -39,11 +39,11 @@ func (p *Parser) nextToken() {
 func (p *Parser) Parse() *ast.File {
 	root := &ast.File{}
 	root.Fragment = &ast.Fragment{
-		Nodes: make([]ast.Element, 0),
+		Nodes: make([]ast.RenderNode, 0),
 	}
 
 	for !p.isCurToken(token.EOF) {
-		el := p.parseElement()
+		el := p.parseRenderNode()
 		if el != nil {
 			root.Fragment.Nodes = append(root.Fragment.Nodes, el)
 		}
@@ -63,33 +63,45 @@ func (p *Parser) Parse() *ast.File {
 //
 // Uses peekToken incases of '<' specifically
 // looking for '/' in which case it also returns nil.
-func (p *Parser) parseElement() ast.Element {
+func (p *Parser) parseRenderNode() ast.RenderNode {
 	switch p.curToken.Type {
 	case token.TEXT:
-		return &ast.Text{Lit: strings.TrimSpace(p.curToken.Literal)}
-	case token.LEFT_CHEV:
+		return &ast.Text{
+			Position: p.curToken.Pos,
+			Literal:  strings.TrimSpace(p.curToken.Literal),
+		}
+	case token.LEFT_CHEVRON:
 		if p.isPeekToken(token.SLASH) {
 			return nil
 		}
-		return p.parseComponent()
+		return p.parseElement()
 	default:
 		return nil
 	}
 }
 
-func (p *Parser) parseComponent() *ast.Component {
-	assert.Assert(p.isCurToken(token.LEFT_CHEV), "expected left chevron")
+func (p *Parser) parseElement() (el *ast.Element) {
+	assert.Assert(p.isCurToken(token.LEFT_CHEVRON), "expected left chevron")
 	assert.Assert(p.isPeekToken(token.IDENT), "expected next token to be an identifier")
 
 	if !p.tryPeek(token.IDENT) {
 		return nil
 	}
 
-	comp := &ast.Component{
-		Name:  &ast.Ident{Name: p.curToken.Literal},
-		Attrs: make([]*ast.Attr, 0),
-		Nodes: make([]ast.Element, 0),
+	comp := &ast.Element{
+		LeftChevron: p.curToken.Pos - 1,
+		Name: &ast.Ident{
+			Position: p.curToken.Pos,
+			Name:     p.curToken.Literal,
+		},
+		Attrs: make([]*ast.Attribute, 0),
+		Nodes: make([]ast.RenderNode, 0),
 	}
+	defer func() {
+		if el != nil {
+			assert.Assert(comp.RightChevron.IsValid(), "expected right chevron location to be set")
+		}
+	}()
 
 	for p.tryPeek(token.IDENT) {
 		attr := p.parseAttribute()
@@ -98,12 +110,12 @@ func (p *Parser) parseComponent() *ast.Component {
 		}
 	}
 
-	assert.Assert(p.isPeekToken(token.RIGHT_CHEV), "expected next token to be a right chevron")
-	_ = p.expectPeek(token.RIGHT_CHEV)
+	assert.Assert(p.isPeekToken(token.RIGHT_CHEVRON), "expected next token to be a right chevron")
+	_ = p.expectPeek(token.RIGHT_CHEVRON)
 
 	for {
 		p.nextToken()
-		el := p.parseElement()
+		el := p.parseRenderNode()
 		if el == nil {
 			break
 		}
@@ -123,22 +135,27 @@ func (p *Parser) parseComponent() *ast.Component {
 		return nil
 	}
 
-	if !p.expectPeek(token.RIGHT_CHEV) {
+	if !p.expectPeek(token.RIGHT_CHEVRON) {
 		return nil
 	}
+
+	comp.RightChevron = p.curToken.Pos
 
 	return comp
 }
 
-func (p *Parser) parseAttribute() *ast.Attr {
+func (p *Parser) parseAttribute() *ast.Attribute {
 	assert.Assert(p.isCurToken(token.IDENT), "expected curToken to be an identifier")
 
-	attr := &ast.Attr{
-		Name: &ast.Ident{Name: p.curToken.Literal},
+	attr := &ast.Attribute{
+		Name: &ast.Ident{
+			Position: p.curToken.Pos,
+			Name:     p.curToken.Literal,
+		},
 	}
 
 	if !p.tryPeek(token.ASSIGN) {
-		attr.ValueLit = "true"
+		attr.ValueLiteral = "true"
 		return attr
 	}
 
@@ -147,7 +164,7 @@ func (p *Parser) parseAttribute() *ast.Attr {
 	}
 
 	if p.tryPeek(token.TEXT) {
-		attr.ValueLit = p.curToken.Literal
+		attr.ValueLiteral = p.curToken.Literal
 	}
 
 	if !p.expectPeek(token.QUOTE) {
@@ -167,6 +184,8 @@ func (p *Parser) isPeekToken(t token.TokenType) bool {
 
 // tryPeek advances the Parser ahead by one token
 // if p.peekToken equals the passed TokenType.
+// If successful p.curToken is guaranteed to contain
+// a token of type = t.
 func (p *Parser) tryPeek(t token.TokenType) bool {
 	if p.isPeekToken(t) {
 		p.nextToken()

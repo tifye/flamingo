@@ -20,11 +20,11 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Fragment)
 	case *Fragment:
 		walkList(v, n.Nodes)
-	case *Component:
+	case *Element:
 		Walk(v, n.Name)
 		walkList(v, n.Attrs)
 		walkList(v, n.Nodes)
-	case *Attr:
+	case *Attribute:
 		Walk(v, n.Name)
 	case *Text:
 	case *Ident:
