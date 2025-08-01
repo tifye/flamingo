@@ -15,8 +15,8 @@ const (
 	ERROR TokenType = iota
 	EOF
 
-	LEFT_CHEV
-	RIGHT_CHEV
+	LEFT_CHEVRON
+	RIGHT_CHEVRON
 	SLASH
 
 	IDENT
@@ -26,24 +26,24 @@ const (
 	ON
 
 	TEXT
-	GO_EXPR
+	GO_EXPRESSION
 	GO_CODE
 )
 
 var ttStr = map[TokenType]string{
-	ERROR:      "ERROR",
-	EOF:        "EOF",
-	LEFT_CHEV:  "LEFT_CHEV",
-	RIGHT_CHEV: "RIGHT_CHEV",
-	SLASH:      "SLASH",
-	IDENT:      "IDENT",
-	ASSIGN:     "ASSIGN",
-	QUOTE:      "QUOTE",
-	COLON:      "COLON",
-	ON:         "ON",
-	TEXT:       "TEXT",
-	GO_EXPR:    "GO_EXPR",
-	GO_CODE:    "GO_CODE",
+	ERROR:         "ERROR",
+	EOF:           "EOF",
+	LEFT_CHEVRON:  "LEFT_CHEV",
+	RIGHT_CHEVRON: "RIGHT_CHEV",
+	SLASH:         "SLASH",
+	IDENT:         "IDENT",
+	ASSIGN:        "ASSIGN",
+	QUOTE:         "QUOTE",
+	COLON:         "COLON",
+	ON:            "ON",
+	TEXT:          "TEXT",
+	GO_EXPRESSION: "GO_EXPR",
+	GO_CODE:       "GO_CODE",
 }
 
 func (tt TokenType) String() string {

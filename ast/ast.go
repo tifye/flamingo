@@ -1,5 +1,11 @@
 package ast
 
+import (
+	source "go/token"
+
+	"github.com/tifye/flamingo/assert"
+)
+
 type NodeType string
 
 const (
@@ -7,10 +13,10 @@ const (
 )
 
 type Node interface {
-	// Pos() token.Pos
+	Pos() source.Pos
 }
 
-type Element interface {
+type RenderNode interface {
 	Node
 	elementNode()
 }
@@ -18,34 +24,64 @@ type Element interface {
 type (
 	// A File node represents a single Flamingo component
 	File struct {
-		Fragment *Fragment
+		CodeBlock *CodeBlock
+		Fragment  *Fragment
+	}
+
+	CodeBlock struct {
+		TopFence    source.Pos
+		BottomFence source.Pos
 	}
 
 	Fragment struct {
-		Nodes []Element
+		Nodes []RenderNode
 	}
 
-	Tag struct {
-		Name  *Ident
-		Attrs []*Attr
-		Nodes []Element
+	Element struct {
+		LeftChevron  source.Pos // left chevron of opening tag
+		RightChevron source.Pos // right chevron of close tag
+		Name         *Ident
+		Attrs        []*Attribute
+		Nodes        []RenderNode
 	}
 
 	Ident struct {
-		Name string
+		Position source.Pos // start of the name
+		Name     string
 	}
 
-	Attr struct {
-		Name     *Ident
-		ValueLit string
+	Attribute struct {
+		Name         *Ident
+		ValueLiteral string
 	}
 
 	Text struct {
-		Lit string
+		Position source.Pos
+		Literal  string
 	}
 )
 
+func (n *File) Pos() source.Pos {
+	if n.CodeBlock != nil {
+		return n.CodeBlock.TopFence
+	}
+	if n.Fragment != nil {
+		return n.Fragment.Pos()
+	}
+	panic("node has no source location")
+}
+func (n *CodeBlock) Pos() source.Pos { return n.TopFence }
+func (n *Fragment) Pos() source.Pos {
+	l := len(n.Nodes)
+	assert.Assert(l > 0, "fragment has no children")
+	return n.Nodes[l-1].Pos()
+}
+func (n *Element) Pos() source.Pos   { return n.LeftChevron }
+func (n *Ident) Pos() source.Pos     { return n.Position }
+func (n *Attribute) Pos() source.Pos { return n.Name.Pos() }
+func (n *Text) Pos() source.Pos      { return n.Position }
+
 // elementNode() makes sure that only element nodes can be assigned to an Element
-func (*Tag) elementNode()      {}
+func (*Element) elementNode()  {}
 func (*Text) elementNode()     {}
 func (*Fragment) elementNode() {}

@@ -103,7 +103,7 @@ type walker struct {
 
 func (w *walker) Visit(n ast.Node) ast.Visitor {
 	switch nt := n.(type) {
-	case *ast.Tag:
+	case *ast.Element:
 		if len(w.compStack) > 0 {
 			w.write("\n")
 		}
@@ -117,13 +117,13 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		}
 
 		return w
-	case *ast.Attr:
+	case *ast.Attribute:
 		assert.Assert(len(w.compStack) > 0, "expected to be inside a component")
-		w.write("\t%s.SetAttribute(\"%s\", \"%s\")\n", w.curCompId(), nt.Name.Name, nt.ValueLit)
+		w.write("\t%s.SetAttribute(\"%s\", \"%s\")\n", w.curCompId(), nt.Name.Name, nt.ValueLiteral)
 		return w
 	case *ast.Text:
 		assert.Assert(len(w.compStack) > 0, "expected to be inside a component")
-		w.write("\t%s.SetAttribute(\"innerText\", `%s`)\n", w.curCompId(), nt.Lit)
+		w.write("\t%s.SetAttribute(\"innerText\", `%s`)\n", w.curCompId(), nt.Literal)
 		return w
 	case *ast.Fragment, *ast.Ident, *ast.File:
 		return w
@@ -153,7 +153,7 @@ func walkList[N ast.Node](v *walker, list []N) {
 }
 
 func walk(v *walker, node ast.Node) {
-	if comp, ok := node.(*ast.Tag); ok {
+	if comp, ok := node.(*ast.Element); ok {
 		id := fmt.Sprintf("%s%d", comp.Name.Name, v.idCounter.Add(1))
 		v.compStack = append(v.compStack, id)
 		defer func() {
@@ -168,11 +168,11 @@ func walk(v *walker, node ast.Node) {
 		walk(v, n.Fragment)
 	case *ast.Fragment:
 		walkList(v, n.Nodes)
-	case *ast.Tag:
+	case *ast.Element:
 		walk(v, n.Name)
 		walkList(v, n.Attrs)
 		walkList(v, n.Nodes)
-	case *ast.Attr:
+	case *ast.Attribute:
 		walk(v, n.Name)
 	case *ast.Text:
 	case *ast.Ident:
