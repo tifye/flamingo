@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	gtoken "go/token"
+	source "go/token"
 	"io"
 	"os"
 
@@ -12,7 +12,7 @@ import (
 	"github.com/tifye/flamingo/lexer"
 )
 
-func ParseFile(fset *gtoken.FileSet, filename string, src any) (*ast.File, error) {
+func ParseFile(fset *source.FileSet, filename string, src any) (*ast.File, error) {
 	input, err := readSource(filename, src)
 	if err != nil {
 		return nil, fmt.Errorf("reading source: %s", err)

@@ -2,14 +2,14 @@ package token
 
 import (
 	"fmt"
-	gtoken "go/token"
+	source "go/token"
 
 	"github.com/tifye/flamingo/assert"
 )
 
 type TokenType int
 
-type Pos = gtoken.Pos
+type Pos = source.Pos
 
 const (
 	ERROR TokenType = iota

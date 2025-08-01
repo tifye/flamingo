@@ -2,7 +2,7 @@ package lexer
 
 import (
 	"fmt"
-	gtoken "go/token"
+	source "go/token"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -18,7 +18,7 @@ const (
 type stateFunc func(*Lexer) stateFunc
 
 type Lexer struct {
-	file   *gtoken.File
+	file   *source.File
 	input  string
 	tokens chan token.Token
 
@@ -29,7 +29,7 @@ type Lexer struct {
 	width     int
 }
 
-func NewLexer(file *gtoken.File, input string) *Lexer {
+func NewLexer(file *source.File, input string) *Lexer {
 	l := &Lexer{
 		input: input,
 		// Channel must be large enough to support the largest
