@@ -86,7 +86,7 @@ func (n *File) End() source.Pos {
 		return n.Fragment.End()
 	}
 	if n.CodeBlock != nil {
-		return n.CodeBlock.TopFence
+		return n.CodeBlock.BottomFence
 	}
 	panic("node has no source location")
 }
