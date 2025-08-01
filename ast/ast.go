@@ -100,7 +100,7 @@ func (n *Element) End() source.Pos { return n.RightChevron }
 func (n *Ident) End() source.Pos   { return source.Pos(int(n.Position) + len(n.Name)) }
 func (n *Attribute) End() source.Pos {
 	if l := len(n.ValueLiteral); l > 0 {
-		return source.Pos(int(n.Name.Pos()) + l + 1)
+		return source.Pos(int(n.Name.Pos()) + l + 3) // +3 for =, ", "
 	}
 	return n.Name.End()
 }
