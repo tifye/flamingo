@@ -73,9 +73,8 @@ func (n *File) Pos() source.Pos {
 }
 func (n *CodeBlock) Pos() source.Pos { return n.TopFence }
 func (n *Fragment) Pos() source.Pos {
-	l := len(n.Nodes)
-	assert.Assert(l > 0, "fragment has no children")
-	return n.Nodes[l-1].Pos()
+	assert.Assert(len(n.Nodes) > 0, "fragment has no children")
+	return n.Nodes[0].Pos()
 }
 func (n *Element) Pos() source.Pos   { return n.LeftChevron }
 func (n *Ident) Pos() source.Pos     { return n.Position }
