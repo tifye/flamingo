@@ -33,8 +33,8 @@ const (
 var ttStr = map[TokenType]string{
 	ERROR:         "ERROR",
 	EOF:           "EOF",
-	LEFT_CHEVRON:  "LEFT_CHEV",
-	RIGHT_CHEVRON: "RIGHT_CHEV",
+	LEFT_CHEVRON:  "LEFT_CHEVRON",
+	RIGHT_CHEVRON: "RIGHT_CHEVRON",
 	SLASH:         "SLASH",
 	IDENT:         "IDENT",
 	ASSIGN:        "ASSIGN",
@@ -42,7 +42,7 @@ var ttStr = map[TokenType]string{
 	COLON:         "COLON",
 	ON:            "ON",
 	TEXT:          "TEXT",
-	GO_EXPRESSION: "GO_EXPR",
+	GO_EXPRESSION: "GO_EXPRESSION",
 	GO_CODE:       "GO_CODE",
 }
 
