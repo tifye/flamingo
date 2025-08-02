@@ -85,8 +85,8 @@ func TestAttribute(t *testing.T) {
 		assert.NotNil(t, el)
 	})
 
-	t.Run(`boolean attribute: <test isTrue />`, func(t *testing.T) {
-		input := `<test isTrue />`
+	t.Run(`boolean attribute: <test isTrue/>`, func(t *testing.T) {
+		input := `<test isTrue/>`
 		el, err := ParseElement(input)
 		assert.NoError(t, err)
 		assert.NotNil(t, el)
