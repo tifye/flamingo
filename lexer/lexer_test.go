@@ -1,7 +1,7 @@
 package lexer
 
 import (
-	gtoken "go/token"
+	source "go/token"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestNextToken(t *testing.T) {
-	fset := gtoken.NewFileSet()
+	fset := source.NewFileSet()
 	t.Run(`<div class="p-4">mino</div>`, func(t *testing.T) {
 		input := `<div class="p-4">mino</div>`
 		f := fset.AddFile("", fset.Base(), len(input))
@@ -104,7 +104,7 @@ func TestTxtToken(t *testing.T) {
 	mino
 	meep
 </div>`
-	fset := gtoken.NewFileSet()
+	fset := source.NewFileSet()
 	f := fset.AddFile("", fset.Base(), len(input))
 
 	tests := []struct {
