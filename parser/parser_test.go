@@ -79,17 +79,21 @@ func TestParseElement(t *testing.T) {
 
 func TestAttribute(t *testing.T) {
 	t.Run(`empty string literal`, func(t *testing.T) {
-		input := `<test isTrue="" />`
+		input := `<test isTrue=""/>`
 		el, err := ParseElement(input)
 		assert.NoError(t, err)
 		assert.NotNil(t, el)
 	})
 
-	t.Run(`boolean attribute: <test isTrue/>`, func(t *testing.T) {
+	t.Run(`just attribute name (boolean)`, func(t *testing.T) {
 		input := `<test isTrue/>`
 		el, err := ParseElement(input)
 		assert.NoError(t, err)
 		assert.NotNil(t, el)
+	})
+
+	t.Run(`multiline attributes`, func(t *testing.T) {
+
 	})
 }
 

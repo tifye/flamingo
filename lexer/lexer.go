@@ -182,10 +182,10 @@ func LexText(l *Lexer) stateFunc {
 	if l.pos > l.start {
 		l.emit(token.TEXT)
 	}
-	return LexTag
+	return LexTagStart
 }
 
-func LexTag(l *Lexer) stateFunc {
+func LexTagStart(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
 	ch := l.next()
@@ -211,13 +211,9 @@ func LexTag(l *Lexer) stateFunc {
 	// todo: check all types of empty characters
 	l.acceptRun(" ")
 
-	if l.accept("/") {
-		l.emit(token.SLASH)
-	}
-
-	if l.accept(">") {
-		l.emit(token.RIGHT_CHEVRON)
-		return LexText
+	ch = l.peek()
+	if ch == '/' || ch == '>' {
+		return LexTagEnd
 	}
 
 	return LexAttribute
@@ -228,7 +224,7 @@ func LexAttribute(l *Lexer) stateFunc {
 
 	l.skipWhitespace()
 
-	l.runUntil("=")
+	l.runUntil("= />")
 	if l.peek() == eof {
 		if l.pos > l.start {
 			l.emit(token.IDENT)
@@ -242,22 +238,27 @@ func LexAttribute(l *Lexer) stateFunc {
 	if l.accept("=") {
 		l.emit(token.ASSIGN)
 	} else {
-		return l.errorf(`expected assignment(=) after attribute identifier`)
+		l.skipWhitespace()
+
+		ch := l.peek()
+		if ch == '/' || ch == '>' {
+			return LexTagEnd
+		}
+
+		return LexAttribute
 	}
 
 	if l.accept(`"`) {
 		l.emit(token.QUOTE)
 	} else {
-		return l.errorf(`expected quote(") to start attribute value`)
+		return l.errorf(`expected quote(") after attribute assign`)
 	}
 
 	l.runUntil(`"`)
-	if l.peek() != eof {
+	if l.pos > l.start {
 		l.emit(token.TEXT)
-	} else {
-		if l.pos > l.start {
-			l.emit(token.TEXT)
-		}
+	}
+	if l.peek() == eof {
 		l.emit(token.EOF)
 		return nil
 	}
@@ -268,12 +269,34 @@ func LexAttribute(l *Lexer) stateFunc {
 		return l.errorf(`expected quote(") to end attribute value`)
 	}
 
-	l.acceptRun(" ")
+	l.skipWhitespace()
 
-	if l.accept(">") {
-		l.emit(token.RIGHT_CHEVRON)
-		return LexText
+	ch := l.peek()
+	if ch == '/' || ch == '>' {
+		return LexTagEnd
 	}
 
 	return LexAttribute
+}
+
+func LexTagEnd(l *Lexer) stateFunc {
+	ch := l.next()
+	assert.Assert(ch == '/' || ch == '>', "expect next rune to either be '/' or '>'")
+
+	switch ch {
+	case '/':
+		l.emit(token.SLASH)
+		if !l.accept(">") {
+			return l.errorf("expected '>' immediately after self closing '/'")
+		}
+		l.emit(token.RIGHT_CHEVRON)
+		return LexText
+
+	case '>':
+		l.emit(token.RIGHT_CHEVRON)
+		return LexText
+
+	default:
+		panic("unreachable")
+	}
 }

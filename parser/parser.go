@@ -23,7 +23,7 @@ func ParseElement(src any) (*ast.Element, error) {
 
 	fset := source.NewFileSet()
 	file := fset.AddFile("", fset.Base(), len(input))
-	l := lexer.NewLexer(file, string(input)).WithState(lexer.LexTag)
+	l := lexer.NewLexer(file, string(input)).WithState(lexer.LexTagStart)
 	p := NewParser(l)
 	el := p.parseElement()
 	if n := len(p.Errors()); n > 0 {
