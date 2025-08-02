@@ -1,7 +1,12 @@
 package parser
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	source "go/token"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/tifye/flamingo/assert"
@@ -9,6 +14,61 @@ import (
 	"github.com/tifye/flamingo/lexer"
 	"github.com/tifye/flamingo/token"
 )
+
+func ParseElement(src any) (*ast.Element, error) {
+	input, err := readSource("", src)
+	if err != nil {
+		return nil, err
+	}
+
+	fset := source.NewFileSet()
+	file := fset.AddFile("", fset.Base(), len(input))
+	l := lexer.NewLexer(file, string(input)).WithState(lexer.LexTag)
+	p := NewParser(l)
+	el := p.parseElement()
+	if n := len(p.Errors()); n > 0 {
+		return el, errors.New(strings.Join(p.Errors(), "; "))
+	}
+	return el, nil
+}
+
+func ParseFile(fset *source.FileSet, filename string, src any) (*ast.File, error) {
+	input, err := readSource(filename, src)
+	if err != nil {
+		return nil, fmt.Errorf("reading source: %s", err)
+	}
+
+	file := fset.AddFile(filename, fset.Base(), len(input))
+	l := lexer.NewLexer(file, string(input))
+	p := NewParser(l)
+
+	fileNode := p.Parse()
+	if len(p.errors) == 0 {
+		return fileNode, nil
+	}
+	return fileNode, fmt.Errorf("%v", p.errors)
+}
+
+func readSource(filename string, src any) ([]byte, error) {
+	if src != nil {
+		switch s := src.(type) {
+		case string:
+			return []byte(s), nil
+		case []byte:
+			return s, nil
+		case *bytes.Buffer:
+			if s != nil {
+				return s.Bytes(), nil
+			}
+		case io.Reader:
+			return io.ReadAll(s)
+		}
+
+		return nil, errors.New("invalid source type")
+	}
+
+	return os.ReadFile(filename)
+}
 
 type Parser struct {
 	l         *lexer.Lexer

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tifye/flamingo/ast"
 	"github.com/tifye/flamingo/lexer"
 )
 
@@ -22,6 +23,22 @@ func TestNestedSimpleComponents(t *testing.T) {
 	require.NotNil(t, root)
 	require.NotNil(t, root.Fragment, "expected a Fragment node")
 	assert.Equal(t, 1, len(root.Fragment.Nodes), "expected component to contain 1 node")
+}
+
+func TestParseElement(t *testing.T) {
+	input := `<div></div>`
+	el, err := ParseElement(input)
+	assert.NoError(t, err)
+	assert.NotNil(t, el)
+	ast.Inspect(el, func(node ast.Node) bool {
+		switch n := node.(type) {
+		case *ast.Element:
+			assert.Equal(t, "div", n.Name.Name)
+			assert.Equal(t, 1, int(n.LeftChevron))
+			assert.Equal(t, 11, int(n.RightChevron))
+		}
+		return true
+	})
 }
 
 func noParserErrors(t *testing.T, p *Parser) {
