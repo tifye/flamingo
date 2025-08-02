@@ -77,6 +77,22 @@ func TestParseElement(t *testing.T) {
 	})
 }
 
+func TestAttribute(t *testing.T) {
+	t.Run(`empty string literal`, func(t *testing.T) {
+		input := `<test isTrue="" />`
+		el, err := ParseElement(input)
+		assert.NoError(t, err)
+		assert.NotNil(t, el)
+	})
+
+	t.Run(`boolean attribute: <test isTrue />`, func(t *testing.T) {
+		input := `<test isTrue />`
+		el, err := ParseElement(input)
+		assert.NoError(t, err)
+		assert.NotNil(t, el)
+	})
+}
+
 func noParserErrors(t *testing.T, p *Parser) {
 	errs := p.Errors()
 	if assert.Empty(t, errs, "expected no errors") {
