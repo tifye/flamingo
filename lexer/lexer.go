@@ -2,7 +2,7 @@ package lexer
 
 import (
 	"fmt"
-	gtoken "go/token"
+	source "go/token"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -18,7 +18,7 @@ const (
 type stateFunc func(*Lexer) stateFunc
 
 type Lexer struct {
-	file   *gtoken.File
+	file   *source.File
 	input  string
 	tokens chan token.Token
 
@@ -29,15 +29,24 @@ type Lexer struct {
 	width     int
 }
 
-func NewLexer(file *gtoken.File, input string) *Lexer {
+func NewLexer(file *source.File, input string) *Lexer {
 	l := &Lexer{
 		input: input,
 		// Channel must be large enough to support the largest
 		// amount of tokens that can be outputed from a single state
 		tokens: make(chan token.Token, 6),
-		state:  lexText,
+		state:  LexText,
 		file:   file,
 	}
+	return l
+}
+
+// WithState sets the lexer's current state function.
+// This is primarily inteded for testing or specialized parsing
+// scenarios. Callers should ensure they understand the lexer's
+// state machine before using this method.
+func (l *Lexer) WithState(state stateFunc) *Lexer {
+	l.state = state
 	return l
 }
 
@@ -62,10 +71,11 @@ func (l *Lexer) emit(typ token.TokenType) {
 
 	assert.Assert(l.pos > l.start, "pos must be past start")
 
+	literal := l.input[l.start:l.pos]
 	tok := token.Token{
-		Pos:     l.file.Pos(l.pos),
+		Pos:     l.file.Pos(l.pos - len(literal)),
 		Type:    typ,
-		Literal: l.input[l.start:l.pos],
+		Literal: literal,
 	}
 	l.tokens <- tok
 	l.start = l.pos
@@ -159,7 +169,7 @@ func (l *Lexer) discard() {
 	l.start = l.pos
 }
 
-func lexText(l *Lexer) stateFunc {
+func LexText(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
 	l.skipWhitespace()
@@ -176,10 +186,10 @@ func lexText(l *Lexer) stateFunc {
 	if l.pos > l.start {
 		l.emit(token.TEXT)
 	}
-	return lexTag
+	return LexTagStart
 }
 
-func lexTag(l *Lexer) stateFunc {
+func LexTagStart(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
 	ch := l.next()
@@ -190,7 +200,7 @@ func lexTag(l *Lexer) stateFunc {
 		l.emit(token.SLASH)
 	}
 
-	l.runUntil("> ")
+	l.runUntil(" />")
 	if l.peek() != eof {
 		l.emit(token.IDENT)
 	} else {
@@ -205,20 +215,20 @@ func lexTag(l *Lexer) stateFunc {
 	// todo: check all types of empty characters
 	l.acceptRun(" ")
 
-	if l.accept(">") {
-		l.emit(token.RIGHT_CHEVRON)
-		return lexText
+	ch = l.peek()
+	if ch == '/' || ch == '>' {
+		return LexTagEnd
 	}
 
-	return lexAttribute
+	return LexAttribute
 }
 
-func lexAttribute(l *Lexer) stateFunc {
+func LexAttribute(l *Lexer) stateFunc {
 	assert.Assert(!l.accept(" "), "expected no empty characters")
 
 	l.skipWhitespace()
 
-	l.runUntil("=")
+	l.runUntil("= />")
 	if l.peek() == eof {
 		if l.pos > l.start {
 			l.emit(token.IDENT)
@@ -232,22 +242,27 @@ func lexAttribute(l *Lexer) stateFunc {
 	if l.accept("=") {
 		l.emit(token.ASSIGN)
 	} else {
-		return l.errorf(`expected assignment(=) after attribute identifier`)
+		l.skipWhitespace()
+
+		ch := l.peek()
+		if ch == '/' || ch == '>' {
+			return LexTagEnd
+		}
+
+		return LexAttribute
 	}
 
 	if l.accept(`"`) {
 		l.emit(token.QUOTE)
 	} else {
-		return l.errorf(`expected quote(") to start attribute value`)
+		return l.errorf(`expected quote(") after attribute assign`)
 	}
 
 	l.runUntil(`"`)
-	if l.peek() != eof {
+	if l.pos > l.start {
 		l.emit(token.TEXT)
-	} else {
-		if l.pos > l.start {
-			l.emit(token.TEXT)
-		}
+	}
+	if l.peek() == eof {
 		l.emit(token.EOF)
 		return nil
 	}
@@ -258,12 +273,34 @@ func lexAttribute(l *Lexer) stateFunc {
 		return l.errorf(`expected quote(") to end attribute value`)
 	}
 
-	l.acceptRun(" ")
+	l.skipWhitespace()
 
-	if l.accept(">") {
-		l.emit(token.RIGHT_CHEVRON)
-		return lexText
+	ch := l.peek()
+	if ch == '/' || ch == '>' {
+		return LexTagEnd
 	}
 
-	return lexAttribute
+	return LexAttribute
+}
+
+func LexTagEnd(l *Lexer) stateFunc {
+	ch := l.next()
+	assert.Assert(ch == '/' || ch == '>', "expect next rune to either be '/' or '>'")
+
+	switch ch {
+	case '/':
+		l.emit(token.SLASH)
+		if !l.accept(">") {
+			return l.errorf("expected '>' immediately after self closing '/'")
+		}
+		l.emit(token.RIGHT_CHEVRON)
+		return LexText
+
+	case '>':
+		l.emit(token.RIGHT_CHEVRON)
+		return LexText
+
+	default:
+		panic("unreachable")
+	}
 }

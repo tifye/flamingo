@@ -1,7 +1,12 @@
 package parser
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	source "go/token"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/tifye/flamingo/assert"
@@ -9,6 +14,61 @@ import (
 	"github.com/tifye/flamingo/lexer"
 	"github.com/tifye/flamingo/token"
 )
+
+func ParseElement(src any) (*ast.Element, error) {
+	input, err := readSource("", src)
+	if err != nil {
+		return nil, err
+	}
+
+	fset := source.NewFileSet()
+	file := fset.AddFile("", fset.Base(), len(input))
+	l := lexer.NewLexer(file, string(input)).WithState(lexer.LexTagStart)
+	p := NewParser(l)
+	el := p.parseElement()
+	if n := len(p.Errors()); n > 0 {
+		return el, errors.New(strings.Join(p.Errors(), "; "))
+	}
+	return el, nil
+}
+
+func ParseFile(fset *source.FileSet, filename string, src any) (*ast.File, error) {
+	input, err := readSource(filename, src)
+	if err != nil {
+		return nil, fmt.Errorf("reading source: %s", err)
+	}
+
+	file := fset.AddFile(filename, fset.Base(), len(input))
+	l := lexer.NewLexer(file, string(input))
+	p := NewParser(l)
+
+	fileNode := p.Parse()
+	if len(p.errors) == 0 {
+		return fileNode, nil
+	}
+	return fileNode, fmt.Errorf("%v", p.errors)
+}
+
+func readSource(filename string, src any) ([]byte, error) {
+	if src != nil {
+		switch s := src.(type) {
+		case string:
+			return []byte(s), nil
+		case []byte:
+			return s, nil
+		case *bytes.Buffer:
+			if s != nil {
+				return s.Bytes(), nil
+			}
+		case io.Reader:
+			return io.ReadAll(s)
+		}
+
+		return nil, errors.New("invalid source type")
+	}
+
+	return os.ReadFile(filename)
+}
 
 type Parser struct {
 	l         *lexer.Lexer
@@ -88,7 +148,7 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		return nil
 	}
 
-	comp := &ast.Element{
+	element := &ast.Element{
 		LeftChevron: p.curToken.Pos - 1,
 		Name: &ast.Ident{
 			Position: p.curToken.Pos,
@@ -99,18 +159,27 @@ func (p *Parser) parseElement() (el *ast.Element) {
 	}
 	defer func() {
 		if el != nil {
-			assert.Assert(comp.RightChevron.IsValid(), "expected right chevron location to be set")
+			assert.Assert(element.RightChevron.IsValid(), "expected right chevron location to be set")
 		}
 	}()
 
 	for p.tryPeek(token.IDENT) {
 		attr := p.parseAttribute()
 		if attr != nil {
-			comp.Attrs = append(comp.Attrs, attr)
+			element.Attrs = append(element.Attrs, attr)
 		}
 	}
 
-	assert.Assert(p.isPeekToken(token.RIGHT_CHEVRON), "expected next token to be a right chevron")
+	if p.tryPeek(token.SLASH) {
+		if !p.expectPeek(token.RIGHT_CHEVRON) {
+			return nil
+		}
+
+		element.RightChevron = p.curToken.Pos
+		return element
+	}
+
+	assert.Assert(p.isPeekToken(token.RIGHT_CHEVRON), "expected next token to be a right chevron but got ")
 	_ = p.expectPeek(token.RIGHT_CHEVRON)
 
 	for {
@@ -119,7 +188,7 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		if el == nil {
 			break
 		}
-		comp.Nodes = append(comp.Nodes, el)
+		element.Nodes = append(element.Nodes, el)
 	}
 
 	if !p.expectPeek(token.SLASH) {
@@ -130,8 +199,8 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		return nil
 	}
 
-	if p.curToken.Literal != comp.Name.Name {
-		p.errorf("unexpected closing tag %s, expected %s", p.curToken.Literal, comp.Name.Name)
+	if p.curToken.Literal != element.Name.Name {
+		p.errorf("unexpected closing tag %s, expected %s", p.curToken.Literal, element.Name.Name)
 		return nil
 	}
 
@@ -139,9 +208,9 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		return nil
 	}
 
-	comp.RightChevron = p.curToken.Pos
+	element.RightChevron = p.curToken.Pos
 
-	return comp
+	return element
 }
 
 func (p *Parser) parseAttribute() *ast.Attribute {
