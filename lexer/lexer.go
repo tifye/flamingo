@@ -2,7 +2,7 @@ package lexer
 
 import (
 	"fmt"
-	gtoken "go/token"
+	source "go/token"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -18,7 +18,7 @@ const (
 type stateFunc func(*Lexer) stateFunc
 
 type Lexer struct {
-	file   *gtoken.File
+	file   *source.File
 	input  string
 	tokens chan token.Token
 
@@ -29,15 +29,20 @@ type Lexer struct {
 	width     int
 }
 
-func NewLexer(file *gtoken.File, input string) *Lexer {
+func NewLexer(file *source.File, input string) *Lexer {
 	l := &Lexer{
 		input: input,
 		// Channel must be large enough to support the largest
 		// amount of tokens that can be outputed from a single state
 		tokens: make(chan token.Token, 6),
-		state:  lexText,
+		state:  LexText,
 		file:   file,
 	}
+	return l
+}
+
+func (l *Lexer) WithState(state stateFunc) *Lexer {
+	l.state = state
 	return l
 }
 
@@ -62,10 +67,11 @@ func (l *Lexer) emit(typ token.TokenType) {
 
 	assert.Assert(l.pos > l.start, "pos must be past start")
 
+	literal := l.input[l.start:l.pos]
 	tok := token.Token{
-		Pos:     l.file.Pos(l.pos),
+		Pos:     l.file.Pos(l.pos - len(literal)),
 		Type:    typ,
-		Literal: l.input[l.start:l.pos],
+		Literal: literal,
 	}
 	l.tokens <- tok
 	l.start = l.pos
@@ -159,7 +165,7 @@ func (l *Lexer) discard() {
 	l.start = l.pos
 }
 
-func lexText(l *Lexer) stateFunc {
+func LexText(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
 	l.skipWhitespace()
@@ -176,10 +182,10 @@ func lexText(l *Lexer) stateFunc {
 	if l.pos > l.start {
 		l.emit(token.TEXT)
 	}
-	return lexTag
+	return LexTag
 }
 
-func lexTag(l *Lexer) stateFunc {
+func LexTag(l *Lexer) stateFunc {
 	assert.AssertNotNil(l)
 
 	ch := l.next()
@@ -190,7 +196,7 @@ func lexTag(l *Lexer) stateFunc {
 		l.emit(token.SLASH)
 	}
 
-	l.runUntil("> ")
+	l.runUntil(" />")
 	if l.peek() != eof {
 		l.emit(token.IDENT)
 	} else {
@@ -205,15 +211,19 @@ func lexTag(l *Lexer) stateFunc {
 	// todo: check all types of empty characters
 	l.acceptRun(" ")
 
-	if l.accept(">") {
-		l.emit(token.RIGHT_CHEVRON)
-		return lexText
+	if l.accept("/") {
+		l.emit(token.SLASH)
 	}
 
-	return lexAttribute
+	if l.accept(">") {
+		l.emit(token.RIGHT_CHEVRON)
+		return LexText
+	}
+
+	return LexAttribute
 }
 
-func lexAttribute(l *Lexer) stateFunc {
+func LexAttribute(l *Lexer) stateFunc {
 	assert.Assert(!l.accept(" "), "expected no empty characters")
 
 	l.skipWhitespace()
@@ -262,8 +272,8 @@ func lexAttribute(l *Lexer) stateFunc {
 
 	if l.accept(">") {
 		l.emit(token.RIGHT_CHEVRON)
-		return lexText
+		return LexText
 	}
 
-	return lexAttribute
+	return LexAttribute
 }

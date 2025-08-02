@@ -1,5 +1,7 @@
 package ast
 
+import "reflect"
+
 type Visitor interface {
 	Visit(node Node) (w Visitor)
 }
@@ -29,6 +31,19 @@ func Walk(v Visitor, node Node) {
 	case *Text:
 	case *Ident:
 	default:
-		return
+		panic("cannot walk node of type: " + reflect.TypeOf(n).String())
 	}
+}
+
+type inspector func(Node) bool
+
+func (f inspector) Visit(node Node) Visitor {
+	if f(node) {
+		return f
+	}
+	return nil
+}
+
+func Inspect(node Node, f func(Node) bool) {
+	Walk(inspector(f), node)
 }
