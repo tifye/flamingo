@@ -41,6 +41,10 @@ func NewLexer(file *source.File, input string) *Lexer {
 	return l
 }
 
+// WithState sets teh lexer's current state function.
+// This is primarily inteded for testing or specialized parsing
+// scenarios. Callers should ensure they understand the lexer's
+// state machine before using this method.
 func (l *Lexer) WithState(state stateFunc) *Lexer {
 	l.state = state
 	return l
