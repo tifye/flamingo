@@ -2,7 +2,7 @@ package compiler
 
 import (
 	"fmt"
-	source "go/token"
+	gtoken "go/token"
 	"strings"
 	"testing"
 
@@ -11,7 +11,7 @@ import (
 )
 
 func TestCompiler(t *testing.T) {
-	fset := source.NewFileSet()
+	fset := gtoken.NewFileSet()
 	output := &strings.Builder{}
 	root, err := parser.ParseFile(fset, "testdata/Mino.flamingo", nil)
 	assert.NoError(t, err)

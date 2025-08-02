@@ -2,7 +2,7 @@ package compiler
 
 import (
 	"fmt"
-	source "go/token"
+	gtoken "go/token"
 	"io"
 	"io/fs"
 	"os"
@@ -16,7 +16,7 @@ import (
 	"github.com/tifye/flamingo/parser"
 )
 
-func CompileDir(pkg string, fset *source.FileSet, path string, output func(fs.FileInfo) (io.WriteCloser, error)) error {
+func CompileDir(pkg string, fset *gtoken.FileSet, path string, output func(fs.FileInfo) (io.WriteCloser, error)) error {
 	assert.AssertNotNil(output)
 
 	entries, err := os.ReadDir(path)

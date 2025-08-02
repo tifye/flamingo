@@ -1,7 +1,7 @@
 package main
 
 import (
-	source "go/token"
+	gtoken "go/token"
 	"io"
 	"io/fs"
 	"os"
@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	fset := source.NewFileSet()
+	fset := gtoken.NewFileSet()
 	compiler.CompileDir("main", fset, ".", func(fi fs.FileInfo) (io.WriteCloser, error) {
 		assert.Assert(!fi.IsDir(), "expected to be file")
 
