@@ -148,7 +148,7 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		return nil
 	}
 
-	comp := &ast.Element{
+	element := &ast.Element{
 		LeftChevron: p.curToken.Pos - 1,
 		Name: &ast.Ident{
 			Position: p.curToken.Pos,
@@ -159,18 +159,27 @@ func (p *Parser) parseElement() (el *ast.Element) {
 	}
 	defer func() {
 		if el != nil {
-			assert.Assert(comp.RightChevron.IsValid(), "expected right chevron location to be set")
+			assert.Assert(element.RightChevron.IsValid(), "expected right chevron location to be set")
 		}
 	}()
 
 	for p.tryPeek(token.IDENT) {
 		attr := p.parseAttribute()
 		if attr != nil {
-			comp.Attrs = append(comp.Attrs, attr)
+			element.Attrs = append(element.Attrs, attr)
 		}
 	}
 
-	assert.Assert(p.isPeekToken(token.RIGHT_CHEVRON), "expected next token to be a right chevron")
+	if p.tryPeek(token.SLASH) {
+		if !p.expectPeek(token.RIGHT_CHEVRON) {
+			return nil
+		}
+
+		element.RightChevron = p.curToken.Pos
+		return element
+	}
+
+	assert.Assert(p.isPeekToken(token.RIGHT_CHEVRON), "expected next token to be a right chevron but got ")
 	_ = p.expectPeek(token.RIGHT_CHEVRON)
 
 	for {
@@ -179,7 +188,7 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		if el == nil {
 			break
 		}
-		comp.Nodes = append(comp.Nodes, el)
+		element.Nodes = append(element.Nodes, el)
 	}
 
 	if !p.expectPeek(token.SLASH) {
@@ -190,8 +199,8 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		return nil
 	}
 
-	if p.curToken.Literal != comp.Name.Name {
-		p.errorf("unexpected closing tag %s, expected %s", p.curToken.Literal, comp.Name.Name)
+	if p.curToken.Literal != element.Name.Name {
+		p.errorf("unexpected closing tag %s, expected %s", p.curToken.Literal, element.Name.Name)
 		return nil
 	}
 
@@ -199,9 +208,9 @@ func (p *Parser) parseElement() (el *ast.Element) {
 		return nil
 	}
 
-	comp.RightChevron = p.curToken.Pos
+	element.RightChevron = p.curToken.Pos
 
-	return comp
+	return element
 }
 
 func (p *Parser) parseAttribute() *ast.Attribute {

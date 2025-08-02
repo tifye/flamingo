@@ -196,7 +196,7 @@ func LexTag(l *Lexer) stateFunc {
 		l.emit(token.SLASH)
 	}
 
-	l.runUntil("> ")
+	l.runUntil(" />")
 	if l.peek() != eof {
 		l.emit(token.IDENT)
 	} else {
@@ -210,6 +210,10 @@ func LexTag(l *Lexer) stateFunc {
 
 	// todo: check all types of empty characters
 	l.acceptRun(" ")
+
+	if l.accept("/") {
+		l.emit(token.SLASH)
+	}
 
 	if l.accept(">") {
 		l.emit(token.RIGHT_CHEVRON)

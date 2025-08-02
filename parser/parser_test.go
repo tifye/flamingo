@@ -2,6 +2,7 @@ package parser
 
 import (
 	source "go/token"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,18 +27,53 @@ func TestNestedSimpleComponents(t *testing.T) {
 }
 
 func TestParseElement(t *testing.T) {
-	input := `<div></div>`
-	el, err := ParseElement(input)
-	assert.NoError(t, err)
-	assert.NotNil(t, el)
-	ast.Inspect(el, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.Element:
-			assert.Equal(t, "div", n.Name.Name)
-			assert.Equal(t, 1, int(n.LeftChevron))
-			assert.Equal(t, 11, int(n.RightChevron))
-		}
-		return true
+	t.Run("<div></div>", func(t *testing.T) {
+		input := `<div></div>`
+		el, err := ParseElement(input)
+		assert.NoError(t, err)
+		assert.NotNil(t, el)
+		ast.Inspect(el, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.Element:
+				assert.Equal(t, "div", n.Name.Name)
+				assert.Equal(t, 1, int(n.LeftChevron))
+				assert.Equal(t, 11, int(n.RightChevron))
+			}
+			return true
+		})
+	})
+
+	t.Run("<div><meep><div></div></meep><mino></mino></div>", func(t *testing.T) {
+		input := `<div><meep><div></div></meep><mino></mino></div>`
+		elements := []string{"div", "div", "meep", "mino"}
+		el, err := ParseElement(input)
+		assert.NoError(t, err)
+		assert.NotNil(t, el)
+		ast.Inspect(el, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.Element:
+				idx := slices.Index(elements, n.Name.Name)
+				elements = slices.Delete(elements, idx, idx+1)
+			}
+			return true
+		})
+		assert.Empty(t, elements)
+	})
+
+	t.Run("<self />", func(t *testing.T) {
+		input := `<self />`
+		el, err := ParseElement(input)
+		assert.NoError(t, err)
+		assert.NotNil(t, el)
+		ast.Inspect(el, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.Element:
+				assert.Equal(t, "self", n.Name.Name)
+				assert.Equal(t, 1, int(n.LeftChevron))
+				assert.Equal(t, 8, int(n.RightChevron))
+			}
+			return true
+		})
 	})
 }
 
