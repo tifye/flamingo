@@ -83,6 +83,14 @@ func TestAttribute(t *testing.T) {
 		el, err := ParseElement(input)
 		assert.NoError(t, err)
 		assert.NotNil(t, el)
+		ast.Inspect(el, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.Attribute:
+				assert.Equal(t, "isTrue", n.Name.Name)
+				assert.Equal(t, "", n.ValueLiteral)
+			}
+			return true
+		})
 	})
 
 	t.Run(`just attribute name (boolean)`, func(t *testing.T) {
@@ -90,10 +98,31 @@ func TestAttribute(t *testing.T) {
 		el, err := ParseElement(input)
 		assert.NoError(t, err)
 		assert.NotNil(t, el)
+		ast.Inspect(el, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.Attribute:
+				assert.Equal(t, "isTrue", n.Name.Name)
+				assert.Equal(t, "true", n.ValueLiteral)
+			}
+			return true
+		})
 	})
 
 	t.Run(`multiline attributes`, func(t *testing.T) {
-
+		input := `<test
+			meep="meep"
+		/>`
+		el, err := ParseElement(input)
+		assert.NoError(t, err)
+		assert.NotNil(t, el)
+		ast.Inspect(el, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.Attribute:
+				assert.Equal(t, "meep", n.Name.Name)
+				assert.Equal(t, "meep", n.ValueLiteral)
+			}
+			return true
+		})
 	})
 }
 
