@@ -35,7 +35,7 @@ func NewLexer(file *source.File, input string) *Lexer {
 		// Channel must be large enough to support the largest
 		// amount of tokens that can be outputed from a single state
 		tokens: make(chan token.Token, 6),
-		state:  LexText,
+		state:  LexCodeBlock,
 		file:   file,
 	}
 	return l
@@ -167,6 +167,63 @@ func (l *Lexer) skipWhitespace() {
 
 func (l *Lexer) discard() {
 	l.start = l.pos
+}
+
+func LexCodeBlock(l *Lexer) stateFunc {
+	assert.AssertNotNil(l)
+
+	l.skipWhitespace()
+	switch l.peek() {
+	case '<':
+		return LexTagStart
+	case eof:
+		if l.pos > l.start {
+			l.emit(token.TEXT)
+		}
+		l.emit(token.EOF)
+		return nil
+	case '-':
+	default:
+		return LexText
+	}
+
+	//lint:ignore SA4000 Here we check for 3 '-' in a row
+	if !l.accept("-") || !l.accept("-") || !l.accept("-") {
+		return l.errorf("expected code fence '---'")
+	}
+
+	l.emit(token.CODE_FENCE)
+
+	if !l.accept("\n") {
+		return l.errorf("expected new line after code fence")
+	}
+
+	for range 10_000 {
+		ch := l.next()
+
+		if ch == eof {
+			return l.errorf("unexpteced end of file, expected code fence")
+		}
+
+		if ch == '\n' && l.peek() == '-' {
+			break
+		}
+
+		l.runUntil("\n")
+	}
+
+	if l.pos > l.start {
+		l.emit(token.GO_CODE)
+	}
+
+	//lint:ignore SA4000 Here we check for 3 '-' in a row
+	if !l.accept("-") || !l.accept("-") || !l.accept("-") {
+		return l.errorf("expected code fence '---'")
+	}
+
+	l.emit(token.CODE_FENCE)
+
+	return LexText
 }
 
 func LexText(l *Lexer) stateFunc {

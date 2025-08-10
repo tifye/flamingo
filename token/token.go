@@ -3,10 +3,9 @@ package token
 import (
 	"fmt"
 	source "go/token"
-
-	"github.com/tifye/flamingo/assert"
 )
 
+//go:generate stringer -type=TokenType
 type TokenType int
 
 type Pos = source.Pos
@@ -28,29 +27,8 @@ const (
 	TEXT
 	GO_EXPRESSION
 	GO_CODE
+	CODE_FENCE
 )
-
-var ttStr = map[TokenType]string{
-	ERROR:         "ERROR",
-	EOF:           "EOF",
-	LEFT_CHEVRON:  "LEFT_CHEVRON",
-	RIGHT_CHEVRON: "RIGHT_CHEVRON",
-	SLASH:         "SLASH",
-	IDENT:         "IDENT",
-	ASSIGN:        "ASSIGN",
-	QUOTE:         "QUOTE",
-	COLON:         "COLON",
-	ON:            "ON",
-	TEXT:          "TEXT",
-	GO_EXPRESSION: "GO_EXPRESSION",
-	GO_CODE:       "GO_CODE",
-}
-
-func (tt TokenType) String() string {
-	str, ok := ttStr[tt]
-	assert.Assert(ok, fmt.Sprintf("missing TokenType entry for %d", tt))
-	return str
-}
 
 type Token struct {
 	Pos     Pos

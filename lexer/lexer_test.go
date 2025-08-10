@@ -132,3 +132,27 @@ func TestTxtToken(t *testing.T) {
 		assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d", i)
 	}
 }
+
+func TestCodeBlock(t *testing.T) {
+	input := `
+---
+func _() {}
+---
+`
+	fset := source.NewFileSet()
+	f := fset.AddFile("", fset.Base(), len(input))
+	tests := []struct {
+		expectedType token.TokenType
+	}{
+		{token.CODE_FENCE},
+		{token.GO_CODE},
+		{token.CODE_FENCE},
+		{token.EOF},
+	}
+
+	l := NewLexer(f, input)
+	for i, tt := range tests {
+		tok := l.NextToken()
+		assert.Equal(t, tt.expectedType, tok.Type, "Token idx %d, expected %s, got %s", i, tt.expectedType, tok.Type)
+	}
+}
