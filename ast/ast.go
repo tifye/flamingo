@@ -32,6 +32,7 @@ type (
 	CodeBlock struct {
 		TopFence    source.Pos
 		BottomFence source.Pos
+		Code        string
 	}
 
 	Fragment struct {

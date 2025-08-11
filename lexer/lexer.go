@@ -198,6 +198,10 @@ func LexCodeBlock(l *Lexer) stateFunc {
 		return l.errorf("expected new line after code fence")
 	}
 
+	// We don't want the initial '\n' to be
+	// registered as part of the Go code
+	l.discard()
+
 	for range 10_000 {
 		ch := l.next()
 

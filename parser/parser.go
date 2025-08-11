@@ -102,6 +102,10 @@ func (p *Parser) Parse() *ast.File {
 		Nodes: make([]ast.RenderNode, 0),
 	}
 
+	if p.isCurToken(token.CODE_FENCE) {
+		root.CodeBlock = p.parseCodeBlock()
+	}
+
 	for !p.isCurToken(token.EOF) {
 		el := p.parseRenderNode()
 		if el != nil {
@@ -116,6 +120,27 @@ func (p *Parser) Parse() *ast.File {
 	}
 
 	return root
+}
+
+func (p *Parser) parseCodeBlock() *ast.CodeBlock {
+	assert.Assert(p.isCurToken(token.CODE_FENCE), "expected curToken to be CODE_FENCE")
+
+	codeBlock := &ast.CodeBlock{
+		TopFence: p.curToken.Pos,
+	}
+
+	if !p.expectPeek(token.GO_CODE) {
+		return nil
+	}
+
+	codeBlock.Code = p.curToken.Literal
+
+	if !p.expectPeek(token.CODE_FENCE) {
+		return nil
+	}
+
+	codeBlock.BottomFence = p.curToken.Pos
+	return codeBlock
 }
 
 // Tries to parse curToken to an Element

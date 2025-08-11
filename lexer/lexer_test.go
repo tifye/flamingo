@@ -138,6 +138,7 @@ func TestCodeBlock(t *testing.T) {
 ---
 func _() {}
 ---
+<test></test>
 `
 	fset := source.NewFileSet()
 	f := fset.AddFile("", fset.Base(), len(input))
@@ -147,6 +148,13 @@ func _() {}
 		{token.CODE_FENCE},
 		{token.GO_CODE},
 		{token.CODE_FENCE},
+		{token.LEFT_CHEVRON},
+		{token.IDENT},
+		{token.RIGHT_CHEVRON},
+		{token.LEFT_CHEVRON},
+		{token.SLASH},
+		{token.IDENT},
+		{token.RIGHT_CHEVRON},
 		{token.EOF},
 	}
 

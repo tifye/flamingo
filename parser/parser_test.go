@@ -77,6 +77,30 @@ func TestParseElement(t *testing.T) {
 	})
 }
 
+func TestCodeBlock(t *testing.T) {
+	input := `---
+func _() {}
+---
+<test></test>
+`
+	fset := source.NewFileSet()
+	el, err := ParseFile(fset, "", input)
+	assert.NoError(t, err)
+	assert.NotNil(t, el)
+	didParseCodeBlock := false
+	ast.Inspect(el, func(node ast.Node) bool {
+		switch n := node.(type) {
+		case *ast.CodeBlock:
+			assert.Equal(t, "func _() {}\n", n.Code)
+			assert.Equal(t, source.Pos(1), n.Pos())
+			assert.Equal(t, source.Pos(17), n.End())
+			didParseCodeBlock = true
+		}
+		return true
+	})
+	assert.True(t, didParseCodeBlock, "expected to parse code block")
+}
+
 func TestAttribute(t *testing.T) {
 	t.Run(`empty string literal`, func(t *testing.T) {
 		input := `<test isTrue=""/>`

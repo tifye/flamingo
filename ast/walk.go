@@ -19,6 +19,7 @@ func Walk(v Visitor, node Node) {
 
 	switch n := node.(type) {
 	case *File:
+		Walk(v, n.CodeBlock)
 		Walk(v, n.Fragment)
 	case *Fragment:
 		walkList(v, n.Nodes)
@@ -30,6 +31,7 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Name)
 	case *Text:
 	case *Ident:
+	case *CodeBlock:
 	default:
 		panic("cannot walk node of type: " + reflect.TypeOf(n).String())
 	}
