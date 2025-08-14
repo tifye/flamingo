@@ -8,8 +8,6 @@ import (
 	"github.com/tifye/flamingo/render"
 )
 
-type jsFunc func(this js.Value, args []js.Value) any
-
 type WebComponent struct {
 	name  string
 	text  string

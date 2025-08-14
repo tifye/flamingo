@@ -1,9 +1,33 @@
+---
+package meep
+
+import "fmt"
+
+var (
+    izu = "izu"
+)
+
+type Mino struct {
+    Meep string `prop`
+    
+    text string
+}
+
+func (c *Mino) OnMount() {
+    meep()
+}
+
+func meep() {
+    fmt.Println("mino")
+}
+---
+
 <div class="bg-rose-500">
     <span>
         mino
         meep
     </span>
     <label>
-        Izu
+        izu
     </label>
 </div>
