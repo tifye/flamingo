@@ -86,6 +86,7 @@ func CompileFile(pkg string, file string, root *ast.File, output io.Writer) erro
 	walk(w, root)
 
 	fmt.Fprint(output, "\n")
+	slices.Reverse(w.renders)
 	for _, r := range w.renders {
 		fmt.Fprintln(w.output, r)
 	}

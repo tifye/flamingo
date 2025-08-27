@@ -158,16 +158,17 @@ func (r *DOMRenderer) Append(parent render.Component, child render.Component) {
 		panic("invalid parent comp type")
 	}
 
-	if p.el == nil {
-		panic("nil parent el")
-	}
+	p.comps = append(p.comps, c)
+	// if p.el == nil {
+	// 	panic("nil parent el")
+	// }
 
-	if c.el != nil {
-		p.el.Call("appendChild", *c.el)
-		return
-	}
+	// if c.el != nil {
+	// 	p.el.Call("appendChild", *c.el)
+	// 	return
+	// }
 
-	frag, el := r.createElement(c)
-	c.el = &el
-	p.el.Call("appendChild", frag)
+	// frag, el := r.createElement(c)
+	// c.el = &el
+	// p.el.Call("appendChild", frag)
 }

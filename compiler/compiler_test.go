@@ -13,7 +13,7 @@ import (
 func TestCompiler(t *testing.T) {
 	fset := source.NewFileSet()
 	output := &strings.Builder{}
-	root, err := parser.ParseFile(fset, "testdata/Mino.flamingo", nil)
+	root, err := parser.ParseFile(fset, "testdata/Test.flamingo", nil)
 	assert.NoError(t, err)
 
 	err = CompileFile("main", "Mino", root, output)
