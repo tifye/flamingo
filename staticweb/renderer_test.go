@@ -10,12 +10,16 @@ import (
 func TestBasicRende(t *testing.T) {
 	builder := strings.Builder{}
 	renderer := NewStaticWebRenderer(&builder)
-	expected := `<div title="test"><span></span></div>`
+	expected := `<div title="test"><span>Izu</span></div>`
 
-	comp := renderer.NewComponent("div")
-	comp.SetAttribute("title", "test")
-	renderer.Append(comp, renderer.NewComponent("span"))
-	renderer.Render(comp)
+	parent := renderer.NewComponent("div")
+	parent.SetAttribute("title", "test")
+
+	child := renderer.NewComponent("span")
+	child.SetAttribute("innerText", "Izu")
+	renderer.Append(parent, child)
+
+	renderer.Render(parent)
 
 	result := builder.String()
 	assert.Equal(t, expected, result)

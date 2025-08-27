@@ -18,6 +18,10 @@ func (c *Component) SetAttribute(key string, val any) {
 	if c.attrs == nil {
 		c.attrs = make(map[string]any)
 	}
+	if key == "innerText" {
+		c.text = fmt.Sprintf("%s", val)
+		return
+	}
 	c.attrs[key] = val
 }
 
@@ -69,6 +73,10 @@ func (r *StaticWebRenderer) writeComponent(c *Component) {
 	}
 
 	_, _ = r.writer.WriteString(">")
+
+	if c.text != "" {
+		_, _ = r.writer.WriteString(c.text)
+	}
 
 	for _, cc := range c.comps {
 		comp, ok := cc.(*Component)
