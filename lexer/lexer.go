@@ -194,7 +194,7 @@ func LexCodeBlock(l *Lexer) stateFunc {
 
 	l.emit(token.CODE_FENCE)
 
-	if !l.accept("\n") {
+	if !l.accept("\r\n") {
 		return l.errorf("expected new line after code fence")
 	}
 

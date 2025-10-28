@@ -81,15 +81,15 @@ func CompileFile(pkg string, file string, root *ast.File, output io.Writer) erro
 		fmt.Fprintf(output, "\t\"%s\"\n", imp)
 	}
 	fmt.Fprint(output, ")\n\n")
-	fmt.Fprintf(output, "func %s(renderer render.Renderer) {\n", file)
+	fmt.Fprintf(output, "func %s(renderer render.Renderer) renderer.Component {\n", file)
 
 	walk(w, root)
 
 	fmt.Fprint(output, "\n")
-	slices.Reverse(w.renders)
 	for _, r := range w.renders {
 		fmt.Fprintln(w.output, r)
 	}
+
 	fmt.Fprint(output, "}")
 
 	return nil
@@ -114,7 +114,7 @@ func (w *walker) Visit(n ast.Node) ast.Visitor {
 		if len(w.compStack) > 1 {
 			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Append(%s, %s)", w.parCompId(), w.curCompId()))
 		} else {
-			w.renders = append(w.renders, fmt.Sprintf("\trenderer.Render(%s)", w.curCompId()))
+			// w.renders = append(w.renders, fmt.Sprintf("\trenderer.Render(%s)", w.curCompId()))
 		}
 
 		return w
